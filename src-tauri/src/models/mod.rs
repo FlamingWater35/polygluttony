@@ -6,6 +6,8 @@ use ts_rs::TS;
 
 use crate::config::Driver;
 
+pub mod language_pair;
+
 /// Basic application/core metadata. Doubles as an IPC health check.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]
