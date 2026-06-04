@@ -8,3 +8,4 @@
 
 pub mod decode;
 pub mod parse;
+pub mod tags;
