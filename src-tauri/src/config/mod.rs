@@ -1,6 +1,9 @@
 //! Application configuration model. Persisted on the frontend via the Tauri
 //! store plugin; these types define the schema and generate matching TS bindings.
 
+pub mod presets;
+pub mod store;
+
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
