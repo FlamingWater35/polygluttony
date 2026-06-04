@@ -1,18 +1,19 @@
 interface PageHeaderProps {
   title: string;
   description?: string;
+  actions?: React.ReactNode;
 }
 
-/** Consistent screen heading used by each feature page. */
-export function PageHeader({ title, description }: PageHeaderProps) {
+export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      {description ? (
-        <p className="max-w-prose text-sm text-muted-foreground">
-          {description}
-        </p>
-      ) : null}
+    <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-3">
+      <div className="flex flex-col gap-0.5">
+        <h1 className="text-base font-semibold tracking-tight text-foreground">{title}</h1>
+        {description ? (
+          <p className="text-[12.5px] text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {actions}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { GlossaryPage } from "@/features/glossary/glossary-page";
+import { EmptyState } from "@/components/empty-state";
 
 export const Route = createFileRoute("/glossary")({
-  component: GlossaryPage,
+  component: () => (
+    <EmptyState title="Glossary" description="Open a folder first." />
+  ),
 });

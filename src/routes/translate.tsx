@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TranslatePage } from "@/features/translate/translate-page";
+import { EmptyState } from "@/components/empty-state";
 
 export const Route = createFileRoute("/translate")({
-  component: TranslatePage,
+  component: () => (
+    <EmptyState title="Translate" description="Open a folder first." />
+  ),
 });

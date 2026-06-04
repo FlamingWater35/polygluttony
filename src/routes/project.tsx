@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "@/components/empty-state";
 
-export const Route = createFileRoute("/verify")({
+export const Route = createFileRoute("/project")({
   component: () => (
-    <EmptyState title="Verify" description="Open a folder first." />
+    <EmptyState title="Project" description="Open a folder first." />
   ),
 });

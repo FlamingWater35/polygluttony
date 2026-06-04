@@ -9,6 +9,9 @@ import type { AppInfo } from "@/types/generated/AppInfo";
 export const ipc = {
   /** App/core metadata. Doubles as a startup health check for the IPC bridge. */
   appInfo: () => invoke<AppInfo>("app_info"),
+  /** O21 — check whether any usable connection exists (first-run gate). */
+  firstRunStatus: () =>
+    invoke<import("@/types/generated/FirstRunStatus").FirstRunStatus>("first_run_status"),
 };
 
 /** Subscribe to a backend-emitted event (progress, logs, …). Returns an unlisten fn. */
