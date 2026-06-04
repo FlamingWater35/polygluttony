@@ -57,7 +57,10 @@ export function ConnectionEditor({
   const { register, handleSubmit, watch, setValue, reset } = useForm<Connection>({
     defaultValues: initial ?? EMPTY,
   });
-  useEffect(() => reset(initial ?? EMPTY), [initial, name, reset]);
+  useEffect(() => {
+    reset(initial ?? EMPTY);
+    setPresetKey("");
+  }, [initial, name, reset]);
 
   const [presetKey, setPresetKey] = useState<string>("");
   const [revealKey, setRevealKey] = useState(false);
@@ -85,9 +88,18 @@ export function ConnectionEditor({
 
   const runTest = async () => {
     setTestState("testing");
-    const res = await onTest(withDetectSentinel(current));
-    if (res.detected_driver) setValue("driver", res.detected_driver);
-    setTestState(res);
+    try {
+      const res = await onTest(withDetectSentinel(current));
+      if (res.detected_driver) setValue("driver", res.detected_driver);
+      setTestState(res);
+    } catch (e) {
+      setTestState({
+        ok: false,
+        model: current.model ?? "",
+        detected_driver: null,
+        message: String(e),
+      });
+    }
   };
 
   const refreshModels = async () => {

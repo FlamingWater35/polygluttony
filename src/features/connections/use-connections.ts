@@ -27,7 +27,9 @@ export function useConnection(name: string | null) {
   return useQuery({
     queryKey: ["connection", name],
     queryFn: () => ipc.readConnection(name as string),
-    enabled: !!name,
+    // Synthetic "new-*" names aren't persisted yet — don't fetch (or retry) them.
+    enabled: !!name && !name.startsWith("new-"),
+    retry: false,
   });
 }
 
