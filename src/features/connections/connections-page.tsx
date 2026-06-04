@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import {
   useConnections,
@@ -52,11 +53,18 @@ export function ConnectionsPage() {
             onSave={async (name, c) => {
               await m.save.mutateAsync({ name, connection: c });
               setSelected(name);
+              toast.success(`Saved “${name}”`);
             }}
-            onSetActive={(name) => m.setActive.mutate(name)}
+            onSetActive={(name) =>
+              m.setActive.mutate(name, {
+                onSuccess: () => toast.success(`“${name}” is now active`),
+              })
+            }
             onSetPersonalization={(name) => m.setPersonalization.mutate(name)}
             onRemove={(name) => {
-              m.remove.mutate(name);
+              m.remove.mutate(name, {
+                onSuccess: () => toast.success(`Removed “${name}”`),
+              });
               setSelected(null);
             }}
             onRename={async (oldName, newName) => {

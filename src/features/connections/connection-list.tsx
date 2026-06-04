@@ -27,7 +27,7 @@ export function ConnectionList({
               : "text-muted-foreground hover:bg-[color:var(--color-bg-hover)]",
           )}
         >
-          <span className="truncate capitalize">{c.name}</span>
+          <span className="truncate">{c.name}</span>
           {view.active === c.name ? (
             <span className="ml-auto text-[9px] text-[color:var(--color-success)]">
               ● active

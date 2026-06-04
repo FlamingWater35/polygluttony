@@ -67,9 +67,8 @@ export function ConnectionEditor({
   onTest: (c: Connection) => Promise<TestResult>;
   onListModels: (c: Connection) => Promise<string[]>;
 }) {
-  const { register, handleSubmit, watch, setValue, reset } = useForm<Connection>({
-    defaultValues: initial ?? EMPTY,
-  });
+  const { register, handleSubmit, watch, setValue, reset, formState } =
+    useForm<Connection>({ defaultValues: initial ?? EMPTY });
   useEffect(() => {
     reset(initial ?? EMPTY);
     setPresetKey(initial ? matchPresetKey(initial, presets) : "");
@@ -90,13 +89,22 @@ export function ConnectionEditor({
     [presets, presetKey],
   );
 
+  const isNew = name.startsWith("new-");
+  const nameChanged = connName.trim() !== (isNew ? "" : name);
+  // Save is enabled only when there's a non-empty name AND something actually
+  // changed (form fields dirty or the name edited), and not mid-submit.
+  const canSave =
+    connName.trim().length > 0 &&
+    !formState.isSubmitting &&
+    (isNew || formState.isDirty || nameChanged);
+
   const applyPreset = (key: string) => {
     setPresetKey(key);
     const p = presets.find((x) => x.key === key);
     if (!p) return;
-    if (p.driver) setValue("driver", p.driver);
-    setValue("base_url", p.base_url);
-    if (p.model) setValue("model", p.model);
+    if (p.driver) setValue("driver", p.driver, { shouldDirty: true });
+    setValue("base_url", p.base_url, { shouldDirty: true });
+    if (p.model) setValue("model", p.model, { shouldDirty: true });
   };
 
   const withDetectSentinel = (c: Connection): Connection =>
@@ -106,7 +114,8 @@ export function ConnectionEditor({
     setTestState("testing");
     try {
       const res = await onTest(withDetectSentinel(current));
-      if (res.detected_driver) setValue("driver", res.detected_driver);
+      if (res.detected_driver)
+        setValue("driver", res.detected_driver, { shouldDirty: true });
       setTestState(res);
     } catch (e) {
       setTestState({
@@ -183,29 +192,52 @@ export function ConnectionEditor({
             </HelpText>
           }
         >
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input
-                type={revealKey ? "text" : "password"}
-                placeholder="••••••••"
-                {...register("api_key")}
-              />
-              <button
-                type="button"
-                onClick={() => setRevealKey((v) => !v)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-              >
-                {revealKey ? (
-                  <EyeSlash className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
-              </button>
-            </div>
-            <Button type="button" variant="secondary" onClick={runTest}>
-              Test
-            </Button>
+          <div className="relative">
+            <Input
+              type={revealKey ? "text" : "password"}
+              placeholder="••••••••"
+              {...register("api_key")}
+            />
+            <button
+              type="button"
+              onClick={() => setRevealKey((v) => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+            >
+              {revealKey ? (
+                <EyeSlash className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+            </button>
           </div>
+        </SetupField>
+
+        <SetupField label="Model">
+          <ModelCombobox
+            value={current.model ?? ""}
+            onChange={(v) => setValue("model", v, { shouldDirty: true })}
+            options={Array.from(new Set([...curated, ...liveModels]))}
+          />
+          <button
+            type="button"
+            onClick={refreshModels}
+            className="mt-1 text-[11px] text-primary hover:underline"
+          >
+            Refresh model list
+          </button>
+        </SetupField>
+
+        <SetupField
+          label="Test"
+          help={
+            <HelpText>
+              Verifies your API key and that the selected model responds.
+            </HelpText>
+          }
+        >
+          <Button type="button" variant="secondary" onClick={runTest}>
+            Test connection
+          </Button>
           {testState === "testing" ? (
             <p className="mt-1 text-[11px] text-muted-foreground">Testing…</p>
           ) : null}
@@ -221,21 +253,6 @@ export function ConnectionEditor({
               {testState.message}
             </p>
           ) : null}
-        </SetupField>
-
-        <SetupField label="Model">
-          <ModelCombobox
-            value={current.model ?? ""}
-            onChange={(v) => setValue("model", v)}
-            options={Array.from(new Set([...curated, ...liveModels]))}
-          />
-          <button
-            type="button"
-            onClick={refreshModels}
-            className="mt-1 text-[11px] text-primary hover:underline"
-          >
-            Refresh model list
-          </button>
         </SetupField>
 
         <label className="mb-2 flex items-center gap-2 text-[11.5px]">
@@ -308,8 +325,8 @@ export function ConnectionEditor({
             Set as active
           </Button>
         ) : null}
-        <Button type="submit" disabled={!connName.trim()}>
-          Save
+        <Button type="submit" disabled={!canSave}>
+          {formState.isSubmitting ? "Saving…" : "Save"}
         </Button>
       </div>
     </form>
