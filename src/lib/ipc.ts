@@ -6,6 +6,10 @@ import type { ConnectionsView } from "@/types/generated/ConnectionsView";
 import type { Preset } from "@/types/generated/Preset";
 import type { TestResult } from "@/types/generated/TestResult";
 import type { FirstRunStatus } from "@/types/generated/FirstRunStatus";
+import type { Language } from "@/types/generated/Language";
+import type { ProjectView } from "@/types/generated/ProjectView";
+import type { FolderPrefs } from "@/types/generated/FolderPrefs";
+import type { RecentFolder } from "@/types/generated/RecentFolder";
 
 /**
  * Typed wrappers around the Rust core's Tauri commands. The webview never talks
@@ -46,6 +50,18 @@ export const ipc = {
    * for Custom: set `connection.prompt_template = "__detect__"`.
    */
   listModels: (connection: Connection) => invoke<string[]>("list_models", { connection }),
+  /** O6/O7/O8 — open a folder: discover files, counts, detect world/language, load prefs. */
+  openFolder: (path: string) =>
+    invoke<ProjectView>("open_folder", { path, now: Math.floor(Date.now() / 1000) }),
+  /** O8 — the supported-language table for the selects. */
+  listLanguages: () => invoke<Language[]>("list_languages"),
+  /** Persist per-folder preferences (languages, world override, tone, selection). */
+  saveFolderPrefs: (path: string, prefs: FolderPrefs) =>
+    invoke<void>("save_folder_prefs", { path, prefs }),
+  /** Recent folders (MRU; missing folders pruned server-side). */
+  listRecents: () => invoke<RecentFolder[]>("list_recents"),
+  removeRecent: (path: string) => invoke<void>("remove_recent", { path }),
+  clearRecents: () => invoke<void>("clear_recents"),
 };
 
 /** Subscribe to a backend-emitted event (progress, logs, …). Returns an unlisten fn. */
