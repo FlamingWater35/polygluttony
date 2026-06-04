@@ -39,6 +39,10 @@ pub fn remove_connection(cfg: &mut AppConfig, name: &str) -> AppResult<()> {
         ));
     }
     cfg.connections.remove(name);
+    // Don't leave a dangling personalization reference to a deleted connection.
+    if cfg.personalization_model.as_deref() == Some(name) {
+        cfg.personalization_model = None;
+    }
     Ok(())
 }
 
@@ -110,6 +114,14 @@ mod tests {
         // A non-active one is removable.
         assert!(remove_connection(&mut cfg, "google").is_ok());
         assert!(!cfg.connections.contains_key("google"));
+    }
+
+    #[test]
+    fn removing_personalization_connection_clears_the_reference() {
+        let mut cfg = default_config(); // personalization = "openai", active = "anthropic"
+        assert_eq!(cfg.personalization_model.as_deref(), Some("openai"));
+        remove_connection(&mut cfg, "openai").unwrap();
+        assert_eq!(cfg.personalization_model, None);
     }
 
     #[test]
