@@ -44,6 +44,10 @@ pub struct Connection {
     pub thinking_budget: Option<u32>,
     #[serde(default)]
     pub web_search: Option<bool>,
+    #[serde(default)]
+    pub prompt_template: Option<String>,
+    #[serde(default)]
+    pub thinking_glossary_norm_budget: Option<u32>,
 }
 
 /// Top-level persisted configuration.
@@ -58,4 +62,25 @@ pub struct AppConfig {
     #[serde(default)]
     pub default_workdir: Option<String>,
     pub connections: BTreeMap<String, Connection>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connection_round_trips_new_fields() {
+        let json = r#"{
+            "driver":"anthropic","base_url":"https://x","api_key":"k","model":"m",
+            "prompt_template":"qwen","thinking_glossary_norm_budget":4096
+        }"#;
+        let c: Connection = serde_json::from_str(json).unwrap();
+        assert_eq!(c.prompt_template.as_deref(), Some("qwen"));
+        assert_eq!(c.thinking_glossary_norm_budget, Some(4096));
+        // Optional fields default to None when absent.
+        let minimal: Connection =
+            serde_json::from_str(r#"{"driver":"openai","base_url":"u","model":"m"}"#).unwrap();
+        assert_eq!(minimal.prompt_template, None);
+        assert_eq!(minimal.api_key, "");
+    }
 }
