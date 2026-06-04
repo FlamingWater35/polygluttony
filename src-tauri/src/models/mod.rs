@@ -4,6 +4,8 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::config::Driver;
+
 /// Basic application/core metadata. Doubles as an IPC health check.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]
@@ -11,8 +13,6 @@ pub struct AppInfo {
     pub name: String,
     pub version: String,
 }
-
-use crate::config::Driver;
 
 /// One row in the Connections list (no secret material).
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

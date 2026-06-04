@@ -101,8 +101,19 @@ pub async fn test_connection(connection: Connection) -> AppResult<TestResult> {
     let (driver, detected) = if detect {
         let base_url = connection.base_url.clone();
         let api_key = connection.api_key.clone();
-        let d = detect_format(&base_url, &api_key).await?;
-        (d, Some(d))
+        match detect_format(&base_url, &api_key).await {
+            Ok(d) => (d, Some(d)),
+            // Undetermined format (both routes 404 / host unreachable): surface a
+            // graceful TestResult rather than an IPC-level error (spec §5.7).
+            Err(e) => {
+                return Ok(TestResult {
+                    ok: false,
+                    model: connection.model.clone(),
+                    detected_driver: None,
+                    message: e.to_string(),
+                })
+            }
+        }
     } else {
         (connection.driver, None)
     };
