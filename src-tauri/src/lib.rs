@@ -38,7 +38,19 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
-        .invoke_handler(tauri::generate_handler![commands::app_info])
+        .invoke_handler(tauri::generate_handler![
+            commands::app_info,
+            commands::list_connections,
+            commands::read_connection,
+            commands::save_connection,
+            commands::delete_connection,
+            commands::set_active_connection,
+            commands::set_personalization_connection,
+            commands::first_run_status,
+            commands::list_presets,
+            commands::test_connection,
+            commands::list_models,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,6 +1,9 @@
 //! Tauri command handlers — the entire surface the webview can call. Each
 //! command is a thin wrapper that delegates to the engine modules.
 
+pub mod connections;
+pub use connections::*;
+
 use crate::models::AppInfo;
 
 /// Returns app/core metadata. Used by the webview as a startup health check for
