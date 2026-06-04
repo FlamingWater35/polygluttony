@@ -31,7 +31,7 @@ export function WelcomePage() {
     return () => {
       void unlisten.then((u) => u());
     };
-  }, [open]);
+  }, [open.mutate]);
 
   const emptyResult = open.data?.files.length === 0;
 
@@ -90,13 +90,13 @@ export function WelcomePage() {
           <p className="text-center text-[11px] text-muted-foreground">
             ↓ or drag a folder onto the window
           </p>
-          {emptyResult ? (
-            <p className="text-center text-[12px] text-[color:var(--color-alert)]">
-              No subtitle files found here.
-            </p>
-          ) : null}
         </div>
       )}
+      {emptyResult ? (
+        <p className="text-center text-[12px] text-[color:var(--color-alert)]">
+          No subtitle files found here.
+        </p>
+      ) : null}
     </div>
   );
 }

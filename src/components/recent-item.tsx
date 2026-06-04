@@ -11,7 +11,7 @@ export function RecentItem({
   onOpen: () => void;
   onRemove: () => void;
 }) {
-  const name = recent.path.split("/").pop() || recent.path;
+  const name = recent.path.split(/[/\\]/).pop() || recent.path;
   return (
     <div className="group flex items-center gap-3 rounded-md border border-border bg-[color:var(--card)] px-3 py-2 hover:bg-[color:var(--color-bg-hover)]">
       <button
