@@ -85,37 +85,42 @@
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --background: #14161a;        /* bg_base */
+    --foreground: #d8d8d8;        /* text_primary */
+    --card: #1a1c20;              /* bg_surface */
+    --card-foreground: #d8d8d8;
+    --popover: #1f2226;          /* bg_raised */
+    --popover-foreground: #d8d8d8;
+    --primary: #4a9eff;          /* accent */
+    --primary-foreground: #0f1114;
+    --secondary: #1f2226;        /* bg_raised */
+    --secondary-foreground: #d8d8d8;
+    --muted: #1a1c20;
+    --muted-foreground: #888888; /* text_muted */
+    --accent: #1f2226;           /* bg_raised (hover surfaces) */
+    --accent-foreground: #ffffff;
+    --destructive: #ff8a8a;      /* danger */
+    --border: #2d3036;
+    --input: #3a3d44;            /* border_strong */
+    --ring: #4a9eff;
+    --sidebar: #0f1114;          /* bg_deepest (rail) */
+    --sidebar-foreground: #d8d8d8;
+    --sidebar-primary: #4a9eff;
+    --sidebar-primary-foreground: #0f1114;
+    --sidebar-accent: #1f2226;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #2d3036;
+    --sidebar-ring: #4a9eff;
+}
+
+@theme inline {
+    --color-alert: #ffcc55;
+    --color-success: #8ad08a;
+    --color-danger: #ff8a8a;
+    --color-state-cleanup: #b48ead;
+    --color-state-verify: #79c0c0;
+    --color-bg-deepest: #0f1114;
+    --color-bg-hover: #2a2d33;
 }
 
 @layer base {
