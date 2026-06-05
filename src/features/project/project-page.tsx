@@ -18,6 +18,11 @@ import { EmptyState } from "@/components/empty-state";
 
 const TONES: Tone[] = ["standard", "xianxia", "wuxia", "comedic", "funny"];
 const WORLDS: WorldType[] = ["xianxia", "wuxia", "historical", "modern"];
+
+// Tone implied by a world type — keep in sync with `tone_for_world` in
+// src-tauri/src/config/projects.rs.
+const toneForWorld = (w: WorldType): Tone =>
+  w === "xianxia" ? "xianxia" : w === "wuxia" ? "wuxia" : "standard";
 const SELECT_CLS =
   "h-9 w-full rounded-md border border-input bg-[color:var(--card)] px-2 text-sm";
 
@@ -118,9 +123,17 @@ export function ProjectPage() {
               <select
                 className={SELECT_CLS}
                 value={effectiveWorld}
-                onChange={(e) =>
-                  persist({ ...prefs, world_override: e.target.value as WorldType })
-                }
+                onChange={(e) => {
+                  const nextWorld = e.target.value as WorldType;
+                  // Tone follows the world type unless the user hand-picked a
+                  // different tone (i.e. tone still matches the previous
+                  // world's implied tone).
+                  const tone =
+                    prefs.tone === toneForWorld(effectiveWorld)
+                      ? toneForWorld(nextWorld)
+                      : prefs.tone;
+                  persist({ ...prefs, world_override: nextWorld, tone });
+                }}
               >
                 {WORLDS.map((w) => (
                   <option key={w} value={w}>
