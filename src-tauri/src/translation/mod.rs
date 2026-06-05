@@ -7,3 +7,5 @@
 //!
 //! Planned submodules: `translator`, `batch_manager`, `batch_translator`,
 //! `scope_calculator`, `verifier`, `progress`.
+
+pub mod parse_response;
