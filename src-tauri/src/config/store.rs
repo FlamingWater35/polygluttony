@@ -76,9 +76,22 @@ pub fn rename_connection(cfg: &mut AppConfig, old: &str, new: &str) -> AppResult
     Ok(())
 }
 
-/// First-run check (O21): any connection carrying a non-empty api_key.
+/// A single connection is usable when it has a non-empty API key **or** its
+/// base URL points to localhost / 127.0.0.1 (e.g. an Ollama instance that
+/// needs no key).
+pub fn connection_is_usable(conn: &Connection) -> bool {
+    !conn.api_key.trim().is_empty()
+        || conn.base_url.contains("localhost")
+        || conn.base_url.contains("127.0.0.1")
+}
+
+/// First-run check (O21): any connection that passes `connection_is_usable`.
+///
+/// Behaviour change from the old key-only check: a keyless localhost
+/// connection (e.g. bare Ollama) now counts as usable, matching the
+/// run-gate semantics in `run.rs::usable_connection`.
 pub fn has_usable_connection(cfg: &AppConfig) -> bool {
-    cfg.connections.values().any(|c| !c.api_key.trim().is_empty())
+    cfg.connections.values().any(connection_is_usable)
 }
 
 /// Update the global default source/target languages. These seed a newly opened
@@ -187,12 +200,50 @@ mod tests {
     }
 
     #[test]
-    fn first_run_is_true_when_no_key() {
-        let cfg = default_config(); // only ollama has a placeholder key
-        // ollama's placeholder counts as a "usable" key, so default is NOT first-run.
+    fn first_run_detection() {
+        // Default config: ollama has both a placeholder key AND a localhost base_url.
+        // Either alone makes it usable, so the default config is never "first run".
+        let cfg = default_config();
         assert!(has_usable_connection(&cfg));
-        let mut empty = default_config();
-        for c in empty.connections.values_mut() { c.api_key.clear(); }
-        assert!(!has_usable_connection(&empty));
+
+        // Clear all keys: ollama still passes because its base_url is localhost.
+        let mut keys_cleared = default_config();
+        for c in keys_cleared.connections.values_mut() {
+            c.api_key.clear();
+        }
+        assert!(has_usable_connection(&keys_cleared), "localhost connection is usable without a key");
+
+        // Clear keys AND change ollama's base_url to a non-local one → genuinely first-run.
+        let mut truly_empty = default_config();
+        for c in truly_empty.connections.values_mut() {
+            c.api_key.clear();
+            c.base_url = "https://api.example.com".into();
+        }
+        assert!(!has_usable_connection(&truly_empty));
+    }
+
+    #[test]
+    fn connection_is_usable_rules() {
+        use crate::config::Driver;
+        let mut c = Connection {
+            driver: Driver::Openai, base_url: "https://api.example.com".into(),
+            api_key: String::new(), model: "m".into(), max_tokens: None,
+            batch_dialogue_limit: None, timeout: None, connect_timeout: None,
+            concurrency: None, thinking_enabled: None, thinking_budget: None,
+            web_search: None, prompt_template: None,
+            thinking_glossary_norm_budget: None,
+        };
+        // No key, non-local URL → not usable.
+        assert!(!connection_is_usable(&c));
+        // Non-empty key → usable.
+        c.api_key = "sk-test".into();
+        assert!(connection_is_usable(&c));
+        // Key cleared, localhost URL → usable.
+        c.api_key.clear();
+        c.base_url = "http://localhost:11434".into();
+        assert!(connection_is_usable(&c));
+        // 127.0.0.1 → usable.
+        c.base_url = "http://127.0.0.1:11434".into();
+        assert!(connection_is_usable(&c));
     }
 }

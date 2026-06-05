@@ -1,11 +1,15 @@
-//! Translation validation pipeline.
-//!
-//! Ports the Python `validation/` package: structure and marker integrity checks
-//! (`<0001:D>` line markers, fuzzy recovery, partial-success fallback) plus a
-//! five-signal weighted drift detector (punctuation, glossary position, sentence
-//! type, last line, length ratio).
-//!
-//! Planned submodules: `alignment`, `line_marker`, `marker_result`,
-//! `structure_result`, `drift_detector`, `drift_result`, and `signals/`
-//! (`punctuation`, `glossary_position`, `sentence_type`, `last_line`,
-//! `length_ratio`).
+//! Validation layers guarding LLM output: structural alignment (layer 0),
+//! line markers (layer 1), drift signals (layer 2), and retranslation scopes.
+
+pub mod alignment;
+pub mod drift;
+pub mod markers;
+pub mod scopes;
+
+/// One source line + its candidate translation, as parsed from an LLM response.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LinePair {
+    pub id: u32,
+    pub src: String,
+    pub tgt: String,
+}

@@ -14,7 +14,10 @@ pub struct LanguagePair {
     pub source_name: String,
     pub target_name: String,
     pub output_suffix: String,
+    // Step 4 (Glossary): pipeline reads these to gate glossary injection.
+    #[allow(dead_code)]
     pub supports_glossary: bool,
+    #[allow(dead_code)]
     pub supports_world_detection: bool,
 }
 

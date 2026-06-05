@@ -5,6 +5,7 @@ import { StatusChip } from "@/components/status-chip";
 import { Separator } from "@/components/ui/separator";
 import { ipc } from "@/lib/ipc";
 import { useAppStore } from "@/stores/app-store";
+import { useTranslationRun } from "@/stores/translation-store";
 
 export function StatusBar() {
   const workdir = useAppStore((s) => s.workdir);
@@ -14,6 +15,7 @@ export function StatusBar() {
   const fileCount = useAppStore((s) => s.fileCount);
   const lineCount = useAppStore((s) => s.dialogueLineCount);
   const connection = useAppStore((s) => s.activeConnection);
+  const translating = useTranslationRun((s) => s.running);
   const { data: appInfo } = useQuery({ queryKey: ["app-info"], queryFn: ipc.appInfo });
 
   return (
@@ -27,12 +29,15 @@ export function StatusBar() {
         {workdir ? `${fileCount} files · ${lineCount} lines` : "— files · — lines"}
       </span>
       <span className="flex-1" />
+      {translating ? (
+        <StatusChip variant="alert">Translating…</StatusChip>
+      ) : null}
       {worldType ? <StatusChip variant="muted">{worldType}</StatusChip> : null}
       <span className="shrink-0">
         {sourceLang}→{targetLang}
       </span>
       <StatusChip variant="accent">{connection ?? "No connection"}</StatusChip>
-      <StateChip state="idle" />
+      <StateChip state={translating ? "translating" : "idle"} />
       <span className="shrink-0 opacity-60">core {appInfo?.version ?? "…"}</span>
     </footer>
   );

@@ -6,7 +6,8 @@ use serde_json::{json, Value};
 
 use crate::config::Connection;
 use crate::llm::error::LlmError;
-use crate::llm::{base_of, get_json, parse_model_ids, post_json, timeout_of, LlmDriver};
+use crate::llm::{base_of, client_for, get_json, parse_model_ids, post_json, timeout_of, LlmDriver, LlmRequest, LlmResponse, Usage};
+use crate::llm::sse;
 
 pub struct AnthropicDriver {
     conn: Connection,
@@ -15,7 +16,8 @@ pub struct AnthropicDriver {
 
 impl AnthropicDriver {
     pub fn new(conn: Connection) -> Self {
-        Self { conn, client: reqwest::Client::new() }
+        let client = client_for(&conn);
+        Self { conn, client }
     }
 
     fn headers(&self) -> HeaderMap {
@@ -27,12 +29,9 @@ impl AnthropicDriver {
         h.insert("anthropic-version", HeaderValue::from_static("2023-06-01"));
         h
     }
-}
 
-#[async_trait]
-impl LlmDriver for AnthropicDriver {
-    async fn complete(&self, system: &str, user: &str) -> Result<String, LlmError> {
-        let url = format!("{}/v1/messages", base_of(&self.conn));
+    /// Build the base request body shared by `complete` and `stream`.
+    fn build_body(&self, system: &str, user: &str) -> Value {
         let mut body = json!({
             "model": self.conn.model,
             "max_tokens": self.conn.max_tokens.unwrap_or(8192),
@@ -46,6 +45,15 @@ impl LlmDriver for AnthropicDriver {
             }
             body["thinking"] = thinking;
         }
+        body
+    }
+}
+
+#[async_trait]
+impl LlmDriver for AnthropicDriver {
+    async fn complete(&self, system: &str, user: &str) -> Result<String, LlmError> {
+        let url = format!("{}/v1/messages", base_of(&self.conn));
+        let body = self.build_body(system, user);
         let data = post_json(&self.client, &url, self.headers(), &body, timeout_of(&self.conn)).await?;
         let text: String = data
             .get("content")
@@ -58,10 +66,59 @@ impl LlmDriver for AnthropicDriver {
                     .collect::<String>()
             })
             .unwrap_or_default();
-        if text.is_empty() {
+        if text.trim().is_empty() {
             return Err(LlmError::Empty);
         }
         Ok(text)
+    }
+
+    async fn stream(&self, req: &LlmRequest) -> Result<LlmResponse, LlmError> {
+        let mut body = self.build_body(&req.system, &req.user);
+        body["stream"] = json!(true);
+        let mut text = String::new();
+        let mut usage = Usage::default();
+        let mut done = false;
+        sse::post_sse(
+            &self.client,
+            &format!("{}/v1/messages", base_of(&self.conn)),
+            self.headers(),
+            &body,
+            |v| match v.get("type").and_then(|t| t.as_str()) {
+                Some("error") => {
+                    let snippet: String = v.to_string().chars().take(500).collect();
+                    Err(LlmError::Transport(format!("provider stream error: {snippet}")))
+                }
+                Some("content_block_delta") => {
+                    if v["delta"]["type"] == "text_delta" {
+                        if let Some(t) = v["delta"]["text"].as_str() {
+                            text.push_str(t);
+                        }
+                    }
+                    Ok(())
+                }
+                Some("message_start") => {
+                    usage.input_tokens = v["message"]["usage"]["input_tokens"].as_u64();
+                    Ok(())
+                }
+                Some("message_delta") => {
+                    usage.output_tokens = v["usage"]["output_tokens"].as_u64();
+                    Ok(())
+                }
+                Some("message_stop") => {
+                    done = true;
+                    Ok(())
+                }
+                _ => Ok(()),
+            },
+        )
+        .await?;
+        if !done {
+            return Err(LlmError::Transport("stream ended before completion".into()));
+        }
+        if text.trim().is_empty() {
+            return Err(LlmError::Empty);
+        }
+        Ok(LlmResponse { text, usage })
     }
 
     async fn list_models(&self) -> Result<Vec<String>, LlmError> {
@@ -132,5 +189,105 @@ mod tests {
             .await;
         let models = AnthropicDriver::new(conn(&server.uri())).list_models().await.unwrap();
         assert_eq!(models, vec!["claude-opus-4-5", "claude-haiku-4-5"]);
+    }
+
+    #[tokio::test]
+    async fn stream_accumulates_text_deltas() {
+        let server = MockServer::start().await;
+        let sse_body = concat!(
+            "event: message_start\n",
+            "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":10}}}\n\n",
+            "event: content_block_delta\n",
+            "data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"Hel\"}}\n\n",
+            "event: content_block_delta\n",
+            "data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"hmm\"}}\n\n",
+            "event: content_block_delta\n",
+            "data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"lo\"}}\n\n",
+            "event: message_delta\n",
+            "data: {\"type\":\"message_delta\",\"usage\":{\"output_tokens\":5}}\n\n",
+            "event: message_stop\n",
+            "data: {\"type\":\"message_stop\"}\n\n",
+        );
+        Mock::given(method("POST"))
+            .and(path("/v1/messages"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("content-type", "text/event-stream")
+                    .set_body_raw(sse_body, "text/event-stream"),
+            )
+            .mount(&server)
+            .await;
+        let driver = AnthropicDriver::new(conn(&server.uri()));
+        let resp = driver
+            .stream(&LlmRequest { system: "s".into(), user: "u".into() })
+            .await
+            .unwrap();
+        assert_eq!(resp.text, "Hello");
+        assert_eq!(resp.usage.input_tokens, Some(10));
+        assert_eq!(resp.usage.output_tokens, Some(5));
+    }
+
+    /// A mid-stream provider error event must surface as a retryable Err.
+    #[tokio::test]
+    async fn stream_error_event_returns_retryable_err() {
+        let server = MockServer::start().await;
+        let sse_body = concat!(
+            "event: message_start\n",
+            "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":5}}}\n\n",
+            "event: content_block_delta\n",
+            "data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"partial\"}}\n\n",
+            "event: error\n",
+            "data: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}\n\n",
+        );
+        Mock::given(method("POST"))
+            .and(path("/v1/messages"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("content-type", "text/event-stream")
+                    .set_body_raw(sse_body, "text/event-stream"),
+            )
+            .mount(&server)
+            .await;
+        let driver = AnthropicDriver::new(conn(&server.uri()));
+        let err = driver
+            .stream(&LlmRequest { system: "s".into(), user: "u".into() })
+            .await
+            .unwrap_err();
+        assert!(err.is_retryable(), "provider stream error should be retryable, got: {err:?}");
+        let msg = err.to_string();
+        assert!(msg.contains("provider stream error"), "unexpected message: {msg}");
+    }
+
+    /// A stream that closes without `message_stop` must return Err.
+    #[tokio::test]
+    async fn stream_without_terminal_event_returns_err() {
+        let server = MockServer::start().await;
+        // No message_stop — stream just ends after the delta.
+        let sse_body = concat!(
+            "event: message_start\n",
+            "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":5}}}\n\n",
+            "event: content_block_delta\n",
+            "data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"truncated\"}}\n\n",
+        );
+        Mock::given(method("POST"))
+            .and(path("/v1/messages"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("content-type", "text/event-stream")
+                    .set_body_raw(sse_body, "text/event-stream"),
+            )
+            .mount(&server)
+            .await;
+        let driver = AnthropicDriver::new(conn(&server.uri()));
+        let err = driver
+            .stream(&LlmRequest { system: "s".into(), user: "u".into() })
+            .await
+            .unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("stream ended before completion"),
+            "unexpected message: {msg}",
+        );
+        assert!(err.is_retryable(), "incomplete stream should be retryable");
     }
 }

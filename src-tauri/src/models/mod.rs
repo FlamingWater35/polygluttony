@@ -74,4 +74,6 @@ pub struct ProjectView {
     pub detected_world: WorldType,
     pub prefs: FolderPrefs,
     pub supports_glossary: bool,
+    /// Number of glossary terms in `glossary.json`, or `None` if no glossary exists.
+    pub glossary_terms: Option<u32>,
 }

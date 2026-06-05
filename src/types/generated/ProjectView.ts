@@ -6,4 +6,8 @@ import type { WorldType } from "./WorldType";
 /**
  * Result of opening a folder (O6/O7/O8 bundled).
  */
-export type ProjectView = { folder: string, files: Array<SourceFile>, total_dialogue_lines: number, detected_source_lang: string | null, detected_world: WorldType, prefs: FolderPrefs, supports_glossary: boolean, };
+export type ProjectView = { folder: string, files: Array<SourceFile>, total_dialogue_lines: number, detected_source_lang: string | null, detected_world: WorldType, prefs: FolderPrefs, supports_glossary: boolean, 
+/**
+ * Number of glossary terms in `glossary.json`, or `None` if no glossary exists.
+ */
+glossary_terms: number | null, };

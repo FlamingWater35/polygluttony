@@ -18,6 +18,37 @@ pub struct DialogueLine {
     pub text: String,
 }
 
+/// Centiseconds → `H:MM:SS.cc` (ASS timestamp shape).
+pub fn format_timestamp_cs(cs: i64) -> String {
+    let cs = cs.max(0);
+    format!(
+        "{}:{:02}:{:02}.{:02}",
+        cs / 360_000,
+        (cs / 6_000) % 60,
+        (cs / 100) % 60,
+        cs % 100
+    )
+}
+
+impl DialogueLine {
+    /// Render back to a `Dialogue:` line (10 fields; text keeps its commas).
+    pub fn render(&self) -> String {
+        format!(
+            "Dialogue: {},{},{},{},{},{},{},{},{},{}",
+            self.layer,
+            format_timestamp_cs(self.start_cs),
+            format_timestamp_cs(self.end_cs),
+            self.style,
+            self.name,
+            self.margin_l,
+            self.margin_r,
+            self.margin_v,
+            self.effect,
+            self.text
+        )
+    }
+}
+
 /// Parse `H:MM:SS.cc` into centiseconds. Returns 0 for unparseable input — a bad
 /// timestamp shouldn't drop an otherwise-valid dialogue line.
 pub fn parse_timestamp_cs(ts: &str) -> i64 {
@@ -84,6 +115,8 @@ pub fn parse_dialogues(text: &str) -> Vec<DialogueLine> {
 }
 
 /// Number of dialogue lines (mirrors Python `AssFile.get_dialogue_count`).
+// Step 3+ (Translate view): used to display line counts before pipeline starts.
+#[allow(dead_code)]
 pub fn dialogue_count(text: &str) -> usize {
     parse_dialogues(text).len()
 }
@@ -122,7 +155,7 @@ Dialogue: 0,0:00:06.00,0:00:09.00,Default,,0,0,0,,{\\i1}第一集{\\i0}
     #[test]
     fn parses_timestamp_to_centiseconds() {
         assert_eq!(parse_timestamp_cs("0:00:01.50"), 150);
-        assert_eq!(parse_timestamp_cs("1:02:03.04"), (1 * 3600 + 2 * 60 + 3) * 100 + 4);
+        assert_eq!(parse_timestamp_cs("1:02:03.04"), (3600 + 2 * 60 + 3) * 100 + 4);
         assert_eq!(parse_timestamp_cs("0:00:00.5"), 50);
     }
 
@@ -136,5 +169,31 @@ Dialogue: 0,0:00:06.00,0:00:09.00,Default,,0,0,0,,{\\i1}第一集{\\i0}
     fn ignores_dialogue_outside_events() {
         let text = "[Script Info]\nDialogue: 0,0:00:01.00,0:00:02.00,D,,0,0,0,,x\n";
         assert_eq!(dialogue_count(text), 0);
+    }
+
+    #[test]
+    fn formats_timestamps_back() {
+        assert_eq!(format_timestamp_cs(0), "0:00:00.00");
+        assert_eq!(format_timestamp_cs(parse_timestamp_cs("1:02:03.45")), "1:02:03.45");
+    }
+
+    #[test]
+    fn renders_dialogue_line() {
+        let d = DialogueLine {
+            layer: 0,
+            start_cs: 150,
+            end_cs: 320,
+            style: "Default".into(),
+            name: "".into(),
+            margin_l: 0,
+            margin_r: 0,
+            margin_v: 0,
+            effect: "".into(),
+            text: r"{\an8}Hello, world".into(),
+        };
+        assert_eq!(
+            d.render(),
+            r"Dialogue: 0,0:00:01.50,0:00:03.20,Default,,0,0,0,,{\an8}Hello, world"
+        );
     }
 }

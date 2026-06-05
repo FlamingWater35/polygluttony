@@ -10,6 +10,7 @@ import type { Language } from "@/types/generated/Language";
 import type { ProjectView } from "@/types/generated/ProjectView";
 import type { FolderPrefs } from "@/types/generated/FolderPrefs";
 import type { RecentFolder } from "@/types/generated/RecentFolder";
+import type { Tone } from "@/types/generated/Tone";
 
 /**
  * Typed wrappers around the Rust core's Tauri commands. The webview never talks
@@ -65,6 +66,16 @@ export const ipc = {
   listRecents: () => invoke<RecentFolder[]>("list_recents"),
   removeRecent: (path: string) => invoke<void>("remove_recent", { path }),
   clearRecents: () => invoke<void>("clear_recents"),
+  /** O16 — start a translation run. */
+  startTranslation: (args: {
+    folder: string
+    files: string[]
+    tone: Tone
+    sourceLang: string
+    targetLang: string
+  }) => invoke<void>("start_translation", { ...args, now: Math.floor(Date.now() / 1000) }),
+  /** O17 — cancel the active run. */
+  cancelTranslation: () => invoke<void>("cancel_translation"),
 };
 
 /** Subscribe to a backend-emitted event (progress, logs, …). Returns an unlisten fn. */

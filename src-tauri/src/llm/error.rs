@@ -23,7 +23,7 @@ impl LlmError {
     pub fn is_retryable(&self) -> bool {
         match self {
             LlmError::Http { status, .. } => {
-                matches!(status, 408 | 425 | 429 | 500 | 502 | 503 | 504)
+                matches!(status, 408 | 425 | 429 | 500 | 502 | 503 | 504 | 529)
             }
             LlmError::Transport(_) => true,
             LlmError::Empty => true,

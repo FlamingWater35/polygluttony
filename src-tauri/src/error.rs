@@ -19,6 +19,15 @@ pub enum AppError {
 
     #[error("{0}")]
     Other(String),
+
+    #[error("a translation run is already active")]
+    RunAlreadyActive,
+
+    #[error("no usable connection — configure one in Connections")]
+    NoActiveConnection,
+
+    #[error("no active translation run")]
+    NoActiveRun,
 }
 
 impl Serialize for AppError {

@@ -7,7 +7,8 @@ use serde_json::{json, Value};
 
 use crate::config::Connection;
 use crate::llm::error::LlmError;
-use crate::llm::{base_of, get_json, parse_model_ids, post_json, timeout_of, LlmDriver};
+use crate::llm::{base_of, client_for, get_json, parse_model_ids, post_json, timeout_of, LlmDriver, LlmRequest, LlmResponse, Usage};
+use crate::llm::sse;
 
 pub struct OpenAiResponsesDriver {
     conn: Connection,
@@ -16,7 +17,8 @@ pub struct OpenAiResponsesDriver {
 
 impl OpenAiResponsesDriver {
     pub fn new(conn: Connection) -> Self {
-        Self { conn, client: reqwest::Client::new() }
+        let client = client_for(&conn);
+        Self { conn, client }
     }
 
     fn headers(&self) -> HeaderMap {
@@ -27,12 +29,9 @@ impl OpenAiResponsesDriver {
         }
         h
     }
-}
 
-#[async_trait]
-impl LlmDriver for OpenAiResponsesDriver {
-    async fn complete(&self, system: &str, user: &str) -> Result<String, LlmError> {
-        let url = format!("{}/responses", base_of(&self.conn));
+    /// Build the base request body shared by `complete` and `stream`.
+    fn build_body(&self, system: &str, user: &str) -> Value {
         let mut body = json!({
             "model": self.conn.model,
             "max_output_tokens": self.conn.max_tokens.unwrap_or(8192),
@@ -44,6 +43,15 @@ impl LlmDriver for OpenAiResponsesDriver {
         if self.conn.web_search.unwrap_or(false) {
             body["tools"] = json!([{"type": "web_search_preview"}]);
         }
+        body
+    }
+}
+
+#[async_trait]
+impl LlmDriver for OpenAiResponsesDriver {
+    async fn complete(&self, system: &str, user: &str) -> Result<String, LlmError> {
+        let url = format!("{}/responses", base_of(&self.conn));
+        let body = self.build_body(system, user);
         let data = post_json(&self.client, &url, self.headers(), &body, timeout_of(&self.conn)).await?;
         let text: String = data
             .get("output")
@@ -59,10 +67,51 @@ impl LlmDriver for OpenAiResponsesDriver {
                     .collect::<String>()
             })
             .unwrap_or_default();
-        if text.is_empty() {
+        if text.trim().is_empty() {
             return Err(LlmError::Empty);
         }
         Ok(text)
+    }
+
+    async fn stream(&self, req: &LlmRequest) -> Result<LlmResponse, LlmError> {
+        let mut body = self.build_body(&req.system, &req.user);
+        body["stream"] = json!(true);
+        let mut text = String::new();
+        let mut usage = Usage::default();
+        let mut done = false;
+        sse::post_sse(
+            &self.client,
+            &format!("{}/responses", base_of(&self.conn)),
+            self.headers(),
+            &body,
+            |v| match v.get("type").and_then(|t| t.as_str()) {
+                Some("response.failed") | Some("response.incomplete") | Some("error") => {
+                    let snippet: String = v.to_string().chars().take(500).collect();
+                    Err(LlmError::Transport(format!("provider stream error: {snippet}")))
+                }
+                Some("response.output_text.delta") => {
+                    if let Some(t) = v["delta"].as_str() {
+                        text.push_str(t);
+                    }
+                    Ok(())
+                }
+                Some("response.completed") => {
+                    usage.input_tokens = v["response"]["usage"]["input_tokens"].as_u64();
+                    usage.output_tokens = v["response"]["usage"]["output_tokens"].as_u64();
+                    done = true;
+                    Ok(())
+                }
+                _ => Ok(()),
+            },
+        )
+        .await?;
+        if !done {
+            return Err(LlmError::Transport("stream ended before completion".into()));
+        }
+        if text.trim().is_empty() {
+            return Err(LlmError::Empty);
+        }
+        Ok(LlmResponse { text, usage })
     }
 
     async fn list_models(&self) -> Result<Vec<String>, LlmError> {
@@ -108,5 +157,31 @@ mod tests {
             .await;
         let d = OpenAiResponsesDriver::new(conn(&server.uri()));
         assert_eq!(d.complete("s", "u").await.unwrap(), "hi");
+    }
+
+    #[tokio::test]
+    async fn stream_accumulates_text_and_usage() {
+        let server = MockServer::start().await;
+        let sse_body = concat!(
+            "data: {\"type\":\"response.output_text.delta\",\"delta\":\"Hi\"}\n\n",
+            "data: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":4,\"output_tokens\":3}}}\n\n",
+        );
+        Mock::given(method("POST"))
+            .and(path("/responses"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("content-type", "text/event-stream")
+                    .set_body_raw(sse_body, "text/event-stream"),
+            )
+            .mount(&server)
+            .await;
+        let driver = OpenAiResponsesDriver::new(conn(&server.uri()));
+        let resp = driver
+            .stream(&LlmRequest { system: "s".into(), user: "u".into() })
+            .await
+            .unwrap();
+        assert_eq!(resp.text, "Hi");
+        assert_eq!(resp.usage.input_tokens, Some(4));
+        assert_eq!(resp.usage.output_tokens, Some(3));
     }
 }

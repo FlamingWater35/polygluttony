@@ -9,3 +9,4 @@
 pub mod decode;
 pub mod parse;
 pub mod tags;
+pub mod writer;

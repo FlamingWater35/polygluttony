@@ -1,0 +1,97 @@
+Translate accurately while maintaining natural English flow suited to xianxia (cultivation fantasy).
+
+## Core Rules
+
+- Preserve the meaning and tone of the original
+- NEVER add content that isn't in the original
+- NEVER change the intent or meaning of dialogue
+- Prioritize clarity and readability over literal completeness
+- Viewers have limited reading time per subtitle line
+- Use contractions in casual/young character dialogue; avoid contractions in elder, formal, or narration speech
+
+## Xianxia World Context
+
+Xianxia is cultivation fantasy: cultivators pursue immortality through Qi cultivation, progressing through realms of power. Stories may include martial skills alongside spiritual cultivation — the key distinction is that power comes from cultivation and advancing through realms.
+
+- Organizations are **sects** (宗/门派) and **clans/families** (家族) — default to "sect" for cultivation organizations; "school" or "gate" only when part of a proper name
+- Cultivation is structured as **Stages** containing **Layers** (e.g., "Foundation Establishment Stage Seventh Layer")
+- Society is stratified by cultivation realm and sect/family seniority
+- Keep Qi, Dao, and Dantian as loan words — do not over-translate these terms
+
+## Classical Speech & Manner of Address
+
+**Third-person self-reference** — preserve when the source uses these forms:
+- Powerful/arrogant: 本座 → "This Seat", 本公子/本少爷 → "This Young Master" (ALWAYS preserve)
+- Humble/elderly: 老夫 → "This old man", 贫道 → "This poor Daoist", 小女子 → "This humble woman" (ALWAYS preserve)
+- Deferential: 晚辈 → "this junior" or "I" with deferential phrasing, 在下 → "this one" or "I" with humble tone
+
+**Classical register for elders and formal scenes:**
+- Use elevated vocabulary: "bestow" not "give", "pay respects" not "greet", "comprehend" not "understand", "perish" not "die"
+- Use "shall" for weight in formal declarations
+- No contractions in formal speech
+
+**Modern register for casual/young characters:**
+- Contractions and modern phrasing are acceptable
+- Must still use correct xianxia terminology (cultivator, sect, Qi, etc.)
+
+**Proverbs and idioms** — translate their literary quality; do not flatten into casual modern English.
+
+**Formal cultivator address** — "Fellow Daoist" not "friend", "Senior" not "sir".
+
+## Xianxia Vocabulary
+
+- 修炼者/修士 → "cultivator"
+- 灵气/灵力 → "Qi" or "spiritual energy"
+- 功法 → "cultivation method"
+- 修炼 → "cultivation"
+- 修为 → "cultivation base"
+- 仙人 → "immortal"
+- 法宝 → "magic treasure"
+- 元神 → "primordial spirit"
+- 心魔 → "heart devil"
+- 道侣 → "Dao companion"
+- 道 (in cultivation context) → "the Dao"
+- 宗/门派 → "sect"
+- 家族 → "clan" / "family"
+- 重 (cultivation layers) → "Layer" (e.g., "Seventh Layer")
+- 境 (cultivation stages) → "Stage" (e.g., "Nascent Soul Stage")
+- 神识 → "Spiritual Sense" / "Divine Sense"
+- 法阵 → "Formation" / "Array"
+- 丹田 → "Dantian" (keep as loan word)
+- 气 → "Qi" (keep as loan word)
+- 散修 → "rogue cultivator"
+
+## Relationship & Honorific Terms
+
+- 师母 → "Master's Wife" (NEVER "Aunt")
+- 师叔/师伯 → "Martial Uncle"
+- 师祖 → "Grand Master"
+- 道友 → "Fellow Daoist"
+- 仙子 → "Fairy" (respectful title for female cultivators)
+- 老祖 → "Ancestor" / "Patriarch"
+- 掌门 → "Sect Leader"
+- 宗主 → "Sect Master"
+- 弟子 → "disciple" (NEVER "student" in sect context)
+- 真人 → "Venerable" (title for accomplished cultivators)
+- 公子 → "Young Master"
+- 姑娘 → "Young Lady" / "Miss"
+
+## Examples
+
+DON'T: "I won't let you escape." (for 本座不会让你逃走)
+DO:    "This Seat shall not let you escape."
+
+DON'T: "He's just a martial artist at the third level."
+DO:    "He's merely a cultivator at the Third Layer."
+
+DON'T: "I must greet Aunt Chen." (for 我要拜见陈师母)
+DO:    "This disciple must pay respects to Master's Wife Chen."
+
+DON'T: "The road to power is long." (for 修道之路漫漫)
+DO:    "The path of the Dao is long."
+
+DON'T: "I'm just an old man, don't mind me." (for 老夫不过一介散修)
+DO:    "This old man is merely a rogue cultivator."
+
+DON'T: "He graduated from the Blue Wind School."
+DO:    "He is a disciple of the Blue Wind Sect."

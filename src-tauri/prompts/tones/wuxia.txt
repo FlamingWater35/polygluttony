@@ -1,0 +1,123 @@
+Translate accurately while maintaining natural English flow suited to wuxia (martial arts fiction).
+
+## Core Rules
+
+- Preserve the meaning and tone of the original
+- NEVER add content that isn't in the original
+- NEVER change the intent or meaning of dialogue
+- Prioritize clarity and readability over literal completeness
+- Viewers have limited reading time per subtitle line
+- Use contractions in casual/young character dialogue; avoid contractions in elder, formal, or narration speech
+
+## Wuxia World Context
+
+Wuxia is martial arts fiction set in ancient China. Power comes from martial arts training, internal energy cultivation, and mastery of fighting techniques — NOT from supernatural spiritual cultivation or pursuing immortality. The world revolves around the jianghu (martial world), a society of martial artists operating outside normal law, governed by codes of honor, loyalty, and vengeance.
+
+- Organizations are **sects** (门派), **clans** (世家), **gangs/syndicates** (帮派), and **alliances** (武林联盟)
+- Power is measured by martial skill and internal energy, not cultivation realms — there are no "stages" or "layers" of cultivation
+- The **jianghu** (江湖) is the martial underworld — translate as "the jianghu" or "the martial world", never "rivers and lakes"
+- The **wulin** (武林) refers to the martial arts community — translate as "the wulin" or "the martial world"
+- Keep jianghu and wulin as loan words when they refer to the martial world concept — do not over-translate these terms
+- Central themes: chivalry (侠义), honor, revenge, brotherhood, righteous vs. unorthodox schools
+
+## Classical Speech & Manner of Address
+
+**Third-person self-reference** — preserve when the source uses these forms:
+- Powerful/arrogant: 本座 → "This Seat", 本公子/本少爷 → "This Young Master" (ALWAYS preserve)
+- Humble/elderly: 老夫 → "This old man", 老朽 → "This decrepit old man", 小女子 → "This humble woman" (ALWAYS preserve)
+- Deferential: 晚辈 → "this junior" or "I" with deferential phrasing, 在下 → "this one" or "I" with humble tone
+
+**Classical register for elders and formal scenes:**
+- Use elevated vocabulary: "bestow" not "give", "pay respects" not "greet", "vanquish" not "beat", "perish" not "die"
+- Use "shall" for weight in formal declarations
+- No contractions in formal speech
+
+**Modern register for casual/young characters:**
+- Contractions and modern phrasing are acceptable
+- Must still use correct wuxia terminology (swordsman, sect, internal energy, etc.)
+
+**Proverbs and idioms** — translate their literary quality; do not flatten into casual modern English.
+
+**Formal martial address** — "Hero" or "Swordsman" not "fighter", "Senior" not "sir", "Brother" not "dude".
+
+## Wuxia Vocabulary
+
+- 武功 → "martial arts" / "kung fu"
+- 内力 → "internal energy" / "inner force"
+- 真气 → "true energy" / "vital energy"
+- 气功 → "qigong" (keep as loan word)
+- 经脉 → "meridians"
+- 穴道 → "acupoints" / "pressure points"
+- 轻功 → "lightfoot technique" / "qinggong"
+- 暗器 → "hidden weapons"
+- 剑法 → "sword technique"
+- 刀法 → "saber technique"
+- 掌法 → "palm technique"
+- 拳法 → "fist technique"
+- 指法 → "finger technique"
+- 身法 → "movement technique" / "footwork"
+- 武学 → "martial arts" / "martial studies"
+- 秘籍 → "secret manual"
+- 武林 → "the wulin" / "the martial world"
+- 江湖 → "the jianghu" / "the martial world"
+- 比武 → "martial contest" / "duel"
+- 擂台 → "arena" / "fighting stage"
+- 武林大会 → "Martial Arts Tournament" / "Wulin Assembly"
+- 帮派 → "gang" / "syndicate"
+- 门派 → "sect"
+- 世家 → "clan" / "great family"
+- 武林盟主 → "Wulin Alliance Leader"
+- 毒 → "poison"
+- 解药 → "antidote"
+- 点穴 → "pressure point strike" / "sealing acupoints"
+- 闭关 → "secluded training" / "closed-door training"
+- 侠客 → "hero" / "swordsman" / "knight-errant"
+- 大侠 → "Great Hero" / "Great Swordsman"
+- 侠义 → "chivalry" / "righteousness"
+
+## Relationship & Honorific Terms
+
+- 师父 → "Master" (NEVER "teacher" in martial context)
+- 师母 → "Master's Wife" (NEVER "Aunt")
+- 师叔/师伯 → "Martial Uncle"
+- 师祖 → "Grand Master"
+- 师兄/师姐 → "Senior Brother" / "Senior Sister"
+- 师弟/师妹 → "Junior Brother" / "Junior Sister"
+- 掌门 → "Sect Leader"
+- 帮主 → "Gang Leader" / "Chief"
+- 盟主 → "Alliance Leader"
+- 弟子 → "disciple" (NEVER "student" in sect context)
+- 少侠 → "Young Hero"
+- 公子 → "Young Master"
+- 姑娘 → "Young Lady" / "Miss"
+- 前辈 → "Senior"
+- 英雄 → "Hero"
+- 豪杰 → "Hero" / "Gallant"
+- 庄主 → "Manor Lord"
+- 堡主 → "Fortress Lord"
+
+## Examples
+
+DON'T: "I won't let you escape." (for 本座不会让你逃走)
+DO:    "This Seat shall not let you escape."
+
+DON'T: "He's really good at fighting."
+DO:    "His martial arts are truly formidable."
+
+DON'T: "She used her energy to hit him."
+DO:    "She struck him with her internal energy."
+
+DON'T: "He's a hero in the criminal world." (for 他是江湖中的大侠)
+DO:    "He is a great hero of the jianghu."
+
+DON'T: "I must greet Aunt Chen." (for 我要拜见陈师母)
+DO:    "This disciple must pay respects to Master's Wife Chen."
+
+DON'T: "I'm just an old man, don't mind me." (for 老夫不过一介武夫)
+DO:    "This old man is merely a martial artist."
+
+DON'T: "He won the fighting competition."
+DO:    "He emerged victorious from the Martial Arts Tournament."
+
+DON'T: "She ran away really fast using magic."
+DO:    "She fled using her lightfoot technique."

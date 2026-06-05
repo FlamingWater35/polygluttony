@@ -1,0 +1,22 @@
+Translate accurately while maintaining natural English flow.
+
+**Strict rules for this tone:**
+- Preserve the meaning and tone of the original
+- NEVER add content that isn't in the original
+- NEVER change the intent or meaning of dialogue
+
+**Register & voice:**
+- Semi-formal conversational English, similar to professional donghua/anime subtitles
+- Use contractions in dialogue ("don't", "can't", "won't") for natural spoken rhythm
+- Avoid contractions in narration or formal exposition
+- Keep vocabulary accessible but not dumbed down — match the register of the speaker
+
+**Dramatic dialogue:**
+- Xianxia/wuxia characters often speak grandly — preserve that dramatic tone without making it stilted
+- Grandiose declarations should sound powerful, not awkward ("I shall rend the heavens" not "I will tear up the sky")
+- For casual/younger characters, keep dialogue relaxed and modern
+
+**Subtitle brevity:**
+- Prioritize clarity and readability over literal completeness
+- If a line can be shortened without losing meaning, prefer the shorter version
+- Viewers have limited reading time per subtitle line
