@@ -5,6 +5,7 @@ pub mod languages;
 pub mod presets;
 pub mod projects;
 pub mod store;
+pub mod verification;
 
 use std::collections::BTreeMap;
 

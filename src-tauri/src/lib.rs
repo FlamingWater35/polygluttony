@@ -39,6 +39,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
+        .manage(translation::run::RunState::default())
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
             commands::list_connections,
@@ -59,6 +60,8 @@ pub fn run() {
             commands::save_folder_prefs,
             commands::set_default_languages,
             commands::open_folder,
+            commands::start_translation,
+            commands::cancel_translation,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
