@@ -48,6 +48,7 @@ pub async fn translate_batch(
     context: &[(String, String)],
     settings: &BatchSettings,
 ) -> BatchOutcome {
+    // Join with \n (Python uses space — no effect on substring glossary matching).
     let batch_content: String =
         lines.iter().map(|l| l.stripped_src.as_str()).collect::<Vec<_>>().join("\n");
     let filtered = glossary.filter_for_batch(&batch_content);
@@ -135,14 +136,19 @@ pub async fn translate_batch_tagged(
         raw.iter().map(|(id, text)| (*id, tags::strip_positional(text))).collect();
     let lines: Vec<BatchLine> = raw
         .iter()
-        .map(|(id, text)| BatchLine {
-            id: *id,
-            kind: if text.contains(r"\pos(") || text.contains(r"\an") {
+        .map(|(id, _text)| {
+            let strip = &strips[id];
+            // Python parity (translator.py:380-387): label only when stripped
+            // text is non-empty AND a tag contains \pos or \an.  Pure-tag lines
+            // (e.g. `{\an8}` alone) stay Dialogue.
+            let kind = if !strip.stripped.trim().is_empty()
+                && strip.tags.iter().any(|t| t.content.contains(r"\pos") || t.content.contains(r"\an"))
+            {
                 LineKind::Label
             } else {
                 LineKind::Dialogue
-            },
-            stripped_src: strips[id].stripped.clone(),
+            };
+            BatchLine { id: *id, kind, stripped_src: strip.stripped.clone() }
         })
         .collect();
 
@@ -238,7 +244,8 @@ mod tests {
 
     #[tokio::test]
     async fn unparseable_json_is_a_failure() {
-        let svc = service(vec!["sorry, no", "still no", "nope"]);
+        // One response is enough: parse errors are not transport-retried.
+        let svc = service(vec!["sorry, no"]);
         let out =
             translate_batch(&svc, &lines(&[(1, "你好")]), &Glossary::default(), &[], &settings())
                 .await;
@@ -272,6 +279,21 @@ mod tests {
         let sent = driver.last_request().expect("a request was sent");
         assert!(sent.user.contains("星汉[→Xinghan]"));
         assert!(sent.system.contains("星汉 → Xinghan"));
+    }
+
+    #[tokio::test]
+    async fn tagged_partial_reapplies_tags_to_salvaged_prefix() {
+        // id 2 missing from response → Partial; id 1's tag must still be reapplied.
+        let svc = service(vec![r#"[{"id":1,"tgt":"<0001:D> Hello"}]"#]);
+        let raw = vec![(1u32, r"{\an8}你好".to_string()), (2u32, "再见".to_string())];
+        let out = translate_batch_tagged(&svc, &raw, &Glossary::default(), &[], &settings()).await;
+        match out {
+            BatchOutcome::Partial { translated, failed_from } => {
+                assert_eq!(translated.get(&1).unwrap(), r"{\an8}Hello");
+                assert_eq!(failed_from, 2);
+            }
+            other => panic!("expected partial, got {other:?}"),
+        }
     }
 
     #[tokio::test]
