@@ -25,11 +25,13 @@ Anthropic, OpenAI, or OpenAI-compatible LLM provider.
 
 **Frontend (React, in `src/`)**
 - React 19 + Vite + TypeScript
-- Tailwind v4 + shadcn/ui (radix base, `maia` style), hugeicons, `motion`
+- Tailwind v4 + shadcn/ui (radix base, `maia` style), Phosphor icons
+  (`@phosphor-icons/react`), `motion`
 - TanStack Router (file-based, `src/routes/`) + TanStack Query
 - Zustand (app state), react-hook-form + zod (forms), sonner (toasts)
-- Feature screens in `src/features/`: `glossary`, `translate`, `verify`,
-  `settings`
+- Single-window shell (icon rail + header + status bar). Feature screens in
+  `src/features/`: `connections`, `welcome`, `project` (built); `glossary`,
+  `translate`, `verify`, `settings` (later)
 
 ## Prerequisites
 

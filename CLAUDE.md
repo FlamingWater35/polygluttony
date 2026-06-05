@@ -70,8 +70,12 @@ authoritative for *what the UI does and how each action binds to the engine.*
   focused views — **not tabs, not a wizard.** Views: **Project, Glossary, Translate,
   Verify, Connections, Settings, Help**, plus a pre-project **Welcome** screen and the
   **shell** (rail + header + status bar).
-- ⚠️ **The current scaffold's top-nav tabs (`src/routes/`, `MainNav`) are a placeholder.**
-  Replace them with the icon-rail + full view set from the docs during implementation.
+- **Built so far:** the **shell** (icon rail + header + status bar, `theme.py` palette,
+  **Phosphor** icons), **Connections**, and the **Welcome + Project** (folder-pickup)
+  views. Remaining workflow views — **Glossary, Translate, Verify** — plus **Settings**
+  and **Help** are gated placeholders, built in later steps. The engine grows with each
+  view; per-step specs/plans live in **`docs/superpowers/{specs,plans}/`** (the
+  authoritative record of what's done and what's next).
 - Each window doc has an **Interactions table** citing the precise Python `file:line` +
   function each control binds to. `03-operations-and-flows.md` defines the 21 logical
   operations (O1–O21), the **progress/log/state event contract** (`core/progress.py`:
@@ -99,13 +103,13 @@ auto-detected** instantly via keyword heuristic (no LLM) and is overridable.
 src-tauri/src/
   commands/   # the entire IPC surface the webview can call
   events.rs   # progress/log/state events emitted to the UI
-  config/     # AppConfig / Connection / Driver (persisted via Tauri store plugin)
+  config/     # AppConfig / Connection / Driver / languages / projects store (Tauri store plugin)
   models/     # shared types crossing the IPC boundary (derive ts-rs `TS`)
   error.rs    # AppError (serializes to a string for the webview)
-  ass/ llm/ glossary/ validation/ translation/   # the engine (ports of subs_translator/*)
+  ass/ llm/ glossary/ validation/ translation/ utils/   # the engine (ports of subs_translator/*)
 src/
-  routes/     # TanStack file-based routes (PLACEHOLDER nav — see §5)
-  features/   # per-view UI: glossary, translate, verify, settings (+ project/connections/welcome/help to add)
+  routes/     # TanStack file-based routes — the icon-rail views
+  features/   # per-view UI: connections, welcome, project (built); glossary, translate, verify, settings, help (later)
   components/  lib/  stores/  hooks/
   types/generated/   # ts-rs output — DO NOT edit by hand; `bun gen:bindings`
 ```
