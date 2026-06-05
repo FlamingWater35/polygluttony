@@ -17,21 +17,16 @@ const STORE_KEY: &str = "projects";
 const RECENTS_CAP: usize = 10;
 
 /// Translation tone (register). Persisted per folder; used by Translate (Step 3).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export, export_to = "../../src/types/generated/")]
 pub enum Tone {
+    #[default]
     Standard,
     Xianxia,
     Wuxia,
     Comedic,
     Funny,
-}
-
-impl Default for Tone {
-    fn default() -> Self {
-        Tone::Standard
-    }
 }
 
 /// A folder's saved preferences.

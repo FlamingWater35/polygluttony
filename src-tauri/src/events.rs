@@ -7,13 +7,20 @@ use ts_rs::TS;
 
 /// Event channel names. Keep in sync with the frontend listeners.
 pub mod names {
+    // Step 4 (Glossary) and Step 5 (Verify/Translate views) will consume these.
+    #[allow(dead_code)]
     pub const TRANSLATION_PROGRESS: &str = "translation://progress";
+    #[allow(dead_code)]
     pub const GLOSSARY_PROGRESS: &str = "glossary://progress";
+    #[allow(dead_code)]
     pub const VERIFICATION_PROGRESS: &str = "verification://progress";
+    #[allow(dead_code)]
     pub const LOG: &str = "core://log";
 }
 
 /// Generic progress payload for a single unit of work (e.g. a file).
+// Step 4 (Glossary) will emit these on the progress channels.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]
 pub struct ProgressEvent {

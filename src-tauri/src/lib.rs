@@ -4,9 +4,6 @@
 //! and the translation engine. The engine modules below are pure Rust and exist
 //! solely to serve the webview through the commands in [`commands`].
 
-// Scaffolding: engine types/events/config are defined ahead of their use sites.
-// Remove once the engine modules are implemented.
-#![allow(dead_code)]
 
 mod commands;
 mod config;

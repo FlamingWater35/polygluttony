@@ -161,6 +161,8 @@ impl Glossary {
 
     /// `{"world_type": ..., "terms": {category: {term: translation}}}` —
     /// byte-compatible with the Python tool's `glossary.json`.
+    // Step 4 (Glossary view): commands/glossary will call this to persist the file.
+    #[allow(dead_code)]
     pub fn to_json(&self) -> String {
         let mut terms = serde_json::Map::new();
         for c in CATEGORIES {

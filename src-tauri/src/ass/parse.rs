@@ -115,6 +115,8 @@ pub fn parse_dialogues(text: &str) -> Vec<DialogueLine> {
 }
 
 /// Number of dialogue lines (mirrors Python `AssFile.get_dialogue_count`).
+// Step 3+ (Translate view): used to display line counts before pipeline starts.
+#[allow(dead_code)]
 pub fn dialogue_count(text: &str) -> usize {
     parse_dialogues(text).len()
 }
@@ -153,7 +155,7 @@ Dialogue: 0,0:00:06.00,0:00:09.00,Default,,0,0,0,,{\\i1}第一集{\\i0}
     #[test]
     fn parses_timestamp_to_centiseconds() {
         assert_eq!(parse_timestamp_cs("0:00:01.50"), 150);
-        assert_eq!(parse_timestamp_cs("1:02:03.04"), (1 * 3600 + 2 * 60 + 3) * 100 + 4);
+        assert_eq!(parse_timestamp_cs("1:02:03.04"), (3600 + 2 * 60 + 3) * 100 + 4);
         assert_eq!(parse_timestamp_cs("0:00:00.5"), 50);
     }
 

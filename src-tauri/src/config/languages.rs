@@ -87,7 +87,7 @@ pub fn detect_source_language(text: &str) -> Option<String> {
         };
         let re = regex::Regex::new(pat).expect("valid language pattern");
         let n = re.find_iter(text).count();
-        if n > 0 && best.as_ref().map_or(true, |(_, b)| n > *b) {
+        if n > 0 && best.as_ref().is_none_or(|(_, b)| n > *b) {
             best = Some((l.code.clone(), n));
         }
     }

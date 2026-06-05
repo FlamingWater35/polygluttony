@@ -59,6 +59,8 @@ impl LlmService {
     }
 
     /// Test/diagnostic view of the current AIMD limit.
+    // Translate view: may surface current concurrency in the status bar.
+    #[allow(dead_code)]
     pub fn current_limit(&self) -> u32 {
         self.state.try_lock().map(|s| s.limit).unwrap_or(0)
     }
@@ -121,7 +123,7 @@ impl LlmService {
                 let now = Instant::now();
                 // Halve only once per congestion window: 429s arriving while a
                 // pause is already active are the same event.
-                if !s.pause_until.is_some_and(|t| t > now) {
+                if s.pause_until.is_none_or(|t| t <= now) {
                     s.limit = (s.limit / 2).max(1);
                 }
                 s.streak = 0;

@@ -119,10 +119,10 @@ pub async fn open_folder(app: AppHandle, path: String, now: i64) -> AppResult<Pr
     let effective_src = get_language(&prefs.source_lang);
     let supports_world = effective_src
         .as_ref()
-        .map_or(false, |l| l.supports_world_detection);
+        .is_some_and(|l| l.supports_world_detection);
     let supports_glossary = effective_src
         .as_ref()
-        .map_or(false, |l| l.supports_glossary);
+        .is_some_and(|l| l.supports_glossary);
     let detected_world = detect(&analyzed.combined_text, supports_world);
 
     let mut projects_cfg = projects_cfg;
