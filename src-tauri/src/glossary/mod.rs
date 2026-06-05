@@ -8,4 +8,6 @@
 //! Planned submodules: `glossary`, `world_detector`, `build_result`, `diff`,
 //! `reference_loader`, `reference_terminology`, `reference_extractor`.
 
+pub mod io;
+pub mod model;
 pub mod world_detector;
