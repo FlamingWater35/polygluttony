@@ -17,7 +17,11 @@ use crate::utils::discover::{discover_source_files, has_existing_translation};
 
 #[tauri::command]
 pub fn list_languages() -> Vec<Language> {
-    languages()
+    // Sorted by display name for the UI selects. The canonical `languages()`
+    // order is preserved there (source detection relies on its tie-break order).
+    let mut langs = languages();
+    langs.sort_by(|a, b| a.name.cmp(&b.name));
+    langs
 }
 
 #[tauri::command]
