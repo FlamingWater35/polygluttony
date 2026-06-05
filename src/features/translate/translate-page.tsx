@@ -9,7 +9,6 @@ import { useTranslationRun } from "@/stores/translation-store";
 import type { FileStateKind } from "@/types/generated/FileStateKind";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/empty-state";
 
 // ── constants ────────────────────────────────────────────────────────────────
 
@@ -93,10 +92,7 @@ export function TranslatePage() {
 
   const [logsOpen, setLogsOpen] = useState(false);
 
-  if (!workdir) {
-    return <EmptyState title="Translate" description="Open a folder first." />;
-  }
-  if (!view) return null;
+  if (!workdir || !view) return null;
 
   const prefs = view.prefs;
   const selected = prefs.selected_files;
@@ -185,7 +181,7 @@ export function TranslatePage() {
 
     let state: FileStateKind = "pending";
     if (result) {
-      state = result.has_warnings ? "warning" : "done";
+      state = !result.success ? "failed" : result.has_warnings ? "warning" : "done";
     } else if (row) {
       state = row.state;
     }
@@ -194,8 +190,12 @@ export function TranslatePage() {
   });
 
   const inProgressCount = tableRows.filter(
-    ({ state }) => state !== "pending" && state !== "done" && state !== "warning",
+    ({ state }) => state !== "pending" && state !== "done" && state !== "warning" && state !== "failed",
   ).length;
+
+  // Progress bar calculations (while running)
+  const doneMeterCount = tableRows.filter(({ state }) => state === "done" || state === "warning" || state === "failed").length;
+  const progressPct = Math.round((doneMeterCount / tableRows.length) * 100);
 
   // ── render ────────────────────────────────────────────────────────────────────
 
@@ -318,24 +318,16 @@ export function TranslatePage() {
         {/* Overall progress bar (while running) */}
         {running && tableRows.length > 0 ? (
           <div className="space-y-1">
-            {(() => {
-              const done = tableRows.filter(({ state }) => state === "done" || state === "warning" || state === "failed").length;
-              const pct = Math.round((done / tableRows.length) * 100);
-              return (
-                <>
-                  <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
-                    <span>{inProgressCount > 0 ? `Translating file ${done + 1} of ${tableRows.length}…` : "Wrapping up…"}</span>
-                    <span>{pct}%</span>
-                  </div>
-                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full bg-primary transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </>
-              );
-            })()}
+            <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
+              <span>{inProgressCount > 0 ? `Translating file ${doneMeterCount + 1} of ${tableRows.length}…` : "Wrapping up…"}</span>
+              <span>{progressPct}%</span>
+            </div>
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
           </div>
         ) : null}
 
