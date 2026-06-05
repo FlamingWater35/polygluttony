@@ -30,14 +30,19 @@ impl LineKind {
 
 /// `<0001:D> text`
 pub fn inject(id: u32, kind: LineKind, text: &str) -> String {
+    debug_assert!(id <= 9999, "marker ids are 4-digit");
     format!("<{:04}:{}> {}", id, kind.tag(), text)
 }
 
-/// Remove exact then fuzzy markers; trim leading whitespace left behind.
+/// Remove exact then fuzzy markers; collapse whitespace runs and trim both ends.
+/// Mirrors Python: PATTERN.sub + FUZZY.sub + re.sub(r"\s+", " ") + .strip()
 pub fn strip(text: &str) -> String {
     let s = EXACT.replace_all(text, "");
     let s = FUZZY.replace_all(&s, "");
-    s.trim_start().to_string()
+    // Collapse all whitespace runs (spaces, tabs, newlines) to a single space,
+    // then trim both ends — matching Python's re.sub(r"\s+", " ", ...).strip().
+    static WS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
+    WS.replace_all(&s, " ").trim().to_string()
 }
 
 /// IDs of exact markers found in `text`, in order.
@@ -100,7 +105,9 @@ pub fn check(expected_ids: &[u32], output: &[LinePair]) -> MarkerCheck {
     if found_dedup != expected_present {
         for (a, b) in found_dedup.iter().zip(expected_present.iter()) {
             if a != b {
-                r.order_mismatches.push(*a);
+                // Record the EXPECTED id at this position (mirrors Python line 142:
+                // `order_mismatches.append(expected_order[i])`).
+                r.order_mismatches.push(*b);
             }
         }
     }
@@ -141,6 +148,10 @@ mod tests {
         assert_eq!(strip("<0001:D> hello"), "hello");
         assert_eq!(strip("< 1 : d > hello"), "hello"); // fuzzy + case-insensitive
         assert_eq!(strip("no markers"), "no markers");
+        // Inline marker: collapses double-space left behind + trims nothing extra.
+        assert_eq!(strip("Some text <0001:D> rest"), "Some text rest");
+        // Leading marker + trailing space: collapse + trim both ends.
+        assert_eq!(strip("<0001:D> hello "), "hello");
     }
 
     fn pair(id: u32, tgt: &str) -> crate::validation::LinePair {
@@ -179,14 +190,20 @@ mod tests {
         let r = check(&[1, 2], &out);
         assert!(!r.is_valid);
         assert!(!r.corrupted_markers.is_empty());
+        assert_eq!(r.corrupted_markers[0].0, 1);
+        assert!(r.corrupted_markers[0].1.contains("0001-0002"));
     }
 
     #[test]
     fn detects_order_mismatch() {
+        // LLM returned markers in reverse order: found=[2,1], expected=[1,2].
+        // Both positions differ; we record the EXPECTED id at each mismatch position.
+        // Position 0: found=2, expected=1 → push 1
+        // Position 1: found=1, expected=2 → push 2
         let out = vec![pair(1, "<0002:D> b"), pair(2, "<0001:D> a")];
         let r = check(&[1, 2], &out);
         assert!(!r.is_valid);
-        assert!(!r.order_mismatches.is_empty());
+        assert_eq!(r.order_mismatches, vec![1, 2]);
     }
 
     #[test]
