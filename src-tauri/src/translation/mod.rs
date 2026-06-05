@@ -10,3 +10,4 @@
 
 pub mod parse_response;
 pub mod prompts;
+pub mod source_detect;
