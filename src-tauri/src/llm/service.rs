@@ -68,6 +68,12 @@ impl LlmService {
             if self.cancel.is_cancelled() {
                 return Err(LlmError::Transport("run cancelled".into()));
             }
+            // Register BEFORE checking state so a concurrent release()'s
+            // notify_waiters() cannot be lost between the state check and the
+            // poll (Notify stores no permit).
+            let notified = self.notify.notified();
+            tokio::pin!(notified);
+            notified.as_mut().enable();
             let wait_until = {
                 let mut s = self.state.lock().await;
                 match s.pause_until {
@@ -89,7 +95,7 @@ impl LlmService {
                 _ = async {
                     match wait_until {
                         Some(t) => tokio::time::sleep_until(t).await,
-                        None => self.notify.notified().await,
+                        None => notified.as_mut().await,
                     }
                 } => {}
             }
@@ -112,11 +118,17 @@ impl LlmService {
                 }
             }
             Err(e) if is_throttle(e) => {
-                s.limit = (s.limit / 2).max(1);
+                let now = Instant::now();
+                // Halve only once per congestion window: 429s arriving while a
+                // pause is already active are the same event.
+                if !s.pause_until.is_some_and(|t| t > now) {
+                    s.limit = (s.limit / 2).max(1);
+                }
                 s.streak = 0;
-                let pause =
-                    retry_after.unwrap_or(Duration::from_millis(BASE_BACKOFF_MS));
-                s.pause_until = Some(Instant::now() + pause);
+                let until = now + retry_after.unwrap_or(Duration::from_millis(BASE_BACKOFF_MS));
+                // Clamp to the max: a shorter retry_after must never shorten an
+                // existing pause window.
+                s.pause_until = Some(s.pause_until.map_or(until, |t| t.max(until)));
             }
             Err(_) => s.streak = 0,
         }
@@ -287,5 +299,29 @@ mod tests {
         let (r1, r2) = tokio::join!(s1.request(req()), s2.request(req()));
         assert!(r1.is_ok() && r2.is_ok());
         assert_eq!(d.call_count(), 2);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn no_lost_wakeup_under_contention() {
+        // cap 1, 8 concurrent requests — all must finish (no hang).
+        let d = ScriptedDriver::new((0..8).map(|i| Ok(format!("r{i}"))).collect());
+        let (tx, _rx) = tokio::sync::mpsc::channel(64);
+        let s = std::sync::Arc::new(LlmService::new(d, 1, CancellationToken::new(), tx));
+        let mut handles = Vec::new();
+        for _ in 0..8 {
+            let s = s.clone();
+            handles.push(tokio::spawn(async move {
+                s.request(LlmRequest { system: "s".into(), user: "u".into() }).await
+            }));
+        }
+        for h in handles {
+            assert!(
+                tokio::time::timeout(std::time::Duration::from_secs(10), h)
+                    .await
+                    .expect("no hang")
+                    .unwrap()
+                    .is_ok()
+            );
+        }
     }
 }
