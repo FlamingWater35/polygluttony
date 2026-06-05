@@ -7,6 +7,7 @@ import type { WorldType } from "./WorldType";
  */
 export type FolderPrefs = { source_lang: string, target_lang: string, world_override: WorldType | null, tone: Tone, 
 /**
- * Empty = all files selected.
+ * Explicit list of selected file names (empty = none selected). A freshly
+ * opened folder is seeded with all files selected; see `open_folder`.
  */
 selected_files: Array<string>, };

@@ -42,7 +42,8 @@ pub struct FolderPrefs {
     pub target_lang: String,
     pub world_override: Option<WorldType>,
     pub tone: Tone,
-    /// Empty = all files selected.
+    /// Explicit list of selected file names (empty = none selected). A freshly
+    /// opened folder is seeded with all files selected; see `open_folder`.
     #[serde(default)]
     pub selected_files: Vec<String>,
 }

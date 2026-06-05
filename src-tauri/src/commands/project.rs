@@ -52,6 +52,15 @@ pub fn save_folder_prefs(app: AppHandle, path: String, prefs: FolderPrefs) -> Ap
     projects::save(&app, &cfg)
 }
 
+/// Persist the source/target pair as the global default — used to seed new
+/// folders and remembered across sessions.
+#[tauri::command]
+pub fn set_default_languages(app: AppHandle, source: String, target: String) -> AppResult<()> {
+    let mut cfg = config_store::load(&app)?;
+    config_store::set_default_languages(&mut cfg, &source, &target);
+    config_store::save(&app, &cfg)
+}
+
 #[tauri::command]
 pub async fn open_folder(app: AppHandle, path: String, now: i64) -> AppResult<ProjectView> {
     let dir = PathBuf::from(&path);
@@ -88,12 +97,18 @@ pub async fn open_folder(app: AppHandle, path: String, now: i64) -> AppResult<Pr
 
     let detected_source_lang = detect_source_language(&analyzed.combined_text);
 
-    let prefs = projects::resolve_prefs(
+    let had_saved = saved.is_some();
+    let mut prefs = projects::resolve_prefs(
         saved,
         detected_source_lang.as_deref(),
         &app_cfg.default_source,
         &app_cfg.default_target,
     );
+    // A freshly opened folder (no saved prefs) starts with every file selected.
+    // `selected_files` is an explicit list — an empty list means "none selected".
+    if !had_saved {
+        prefs.selected_files = analyzed.files.iter().map(|f| f.name.clone()).collect();
+    }
 
     // Capabilities + world detection follow the *resolved* source language
     // (saved → detected → default), not the pre-detection pair used for discovery.

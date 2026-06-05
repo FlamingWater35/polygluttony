@@ -57,6 +57,7 @@ pub fn run() {
             commands::remove_recent,
             commands::clear_recents,
             commands::save_folder_prefs,
+            commands::set_default_languages,
             commands::open_folder,
         ])
         .run(tauri::generate_context!())

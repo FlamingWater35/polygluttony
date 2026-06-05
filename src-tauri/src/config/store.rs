@@ -81,6 +81,13 @@ pub fn has_usable_connection(cfg: &AppConfig) -> bool {
     cfg.connections.values().any(|c| !c.api_key.trim().is_empty())
 }
 
+/// Update the global default source/target languages. These seed a newly opened
+/// folder that has no saved per-folder preferences (and persist across sessions).
+pub fn set_default_languages(cfg: &mut AppConfig, source: &str, target: &str) {
+    cfg.default_source = source.to_string();
+    cfg.default_target = target.to_string();
+}
+
 // ---- Tauri store adapter (thin; not unit-tested) ---------------------------
 
 /// Load the config from the store, seeding + persisting defaults on first run.
@@ -169,6 +176,14 @@ mod tests {
         assert_eq!(cfg.personalization_model.as_deref(), Some("openai"));
         remove_connection(&mut cfg, "openai").unwrap();
         assert_eq!(cfg.personalization_model, None);
+    }
+
+    #[test]
+    fn set_default_languages_updates_config() {
+        let mut cfg = default_config();
+        set_default_languages(&mut cfg, "ja", "en");
+        assert_eq!(cfg.default_source, "ja");
+        assert_eq!(cfg.default_target, "en");
     }
 
     #[test]

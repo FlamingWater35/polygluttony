@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Play } from "@phosphor-icons/react";
 import type { Language } from "@/types/generated/Language";
 import type { FolderPrefs } from "@/types/generated/FolderPrefs";
@@ -8,7 +8,7 @@ import type { Tone } from "@/types/generated/Tone";
 import type { WorldType } from "@/types/generated/WorldType";
 import { ipc } from "@/lib/ipc";
 import { useAppStore } from "@/stores/app-store";
-import { useProject, syncProjectStore } from "./use-project";
+import { useProject, syncProjectStore, projectKey } from "./use-project";
 import { FileList } from "./file-list";
 import { PageHeader } from "@/components/page-header";
 import { SetupField } from "@/components/setup-field";
@@ -24,6 +24,7 @@ const SELECT_CLS =
 export function ProjectPage() {
   const workdir = useAppStore((s) => s.workdir);
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: view } = useProject(workdir ?? "");
   const { data: languages } = useQuery({
     queryKey: ["languages"],
@@ -41,9 +42,17 @@ export function ProjectPage() {
 
   const persist = (next: FolderPrefs) => {
     setPrefs(next);
+    // Save immediately (per-folder) so a tab switch / revisit sees the change.
     void ipc.saveFolderPrefs(view.folder, next);
-    // Keep the shell (status bar + rail gating) consistent with edits.
+    // Keep the cached ProjectView + the shell (status bar + rail gating) in sync.
+    qc.setQueryData(projectKey(view.folder), { ...view, prefs: next });
     syncProjectStore({ ...view, prefs: next });
+    // The source/target pair doubles as the global default for new folders + sessions.
+    const langsChanged =
+      next.source_lang !== prefs.source_lang || next.target_lang !== prefs.target_lang;
+    if (langsChanged && next.source_lang !== next.target_lang) {
+      void ipc.setDefaultLanguages(next.source_lang, next.target_lang);
+    }
   };
 
   const sameLang = prefs.source_lang === prefs.target_lang;

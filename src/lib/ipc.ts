@@ -58,6 +58,9 @@ export const ipc = {
   /** Persist per-folder preferences (languages, world override, tone, selection). */
   saveFolderPrefs: (path: string, prefs: FolderPrefs) =>
     invoke<void>("save_folder_prefs", { path, prefs }),
+  /** Persist the source/target pair as the global default (new folders + future sessions). */
+  setDefaultLanguages: (source: string, target: string) =>
+    invoke<void>("set_default_languages", { source, target }),
   /** Recent folders (MRU; missing folders pruned server-side). */
   listRecents: () => invoke<RecentFolder[]>("list_recents"),
   removeRecent: (path: string) => invoke<void>("remove_recent", { path }),
