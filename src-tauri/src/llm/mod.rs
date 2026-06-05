@@ -19,6 +19,7 @@ pub mod service;
 use async_trait::async_trait;
 use reqwest::header::HeaderMap;
 use serde_json::Value;
+use std::time::Duration;
 
 use crate::config::{Connection, Driver};
 use error::LlmError;
@@ -134,4 +135,21 @@ pub(crate) fn base_of(conn: &Connection) -> String {
 
 pub(crate) fn timeout_of(conn: &Connection) -> u64 {
     conn.timeout.unwrap_or(120) as u64
+}
+
+/// Build a `reqwest::Client` for a driver connection.
+///
+/// - `connect_timeout` bounds the TCP handshake.
+/// - `read_timeout` is an **idle read timeout** — it resets on every chunk
+///   received, so a healthy long-running generation is never killed.  This
+///   mirrors httpx `read` timeout semantics and replaces the old per-request
+///   `.timeout()` that cut off streams after the total deadline.
+pub(crate) fn client_for(conn: &Connection) -> reqwest::Client {
+    let connect = Duration::from_secs(conn.connect_timeout.unwrap_or(10) as u64);
+    let read = Duration::from_secs(timeout_of(conn));
+    reqwest::Client::builder()
+        .connect_timeout(connect)
+        .read_timeout(read)
+        .build()
+        .expect("reqwest client")
 }

@@ -4,11 +4,10 @@
 use async_trait::async_trait;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Value};
-use std::time::Duration;
 
 use crate::config::Connection;
 use crate::llm::error::LlmError;
-use crate::llm::{base_of, get_json, parse_model_ids, post_json, timeout_of, LlmDriver, LlmRequest, LlmResponse, Usage};
+use crate::llm::{base_of, client_for, get_json, parse_model_ids, post_json, timeout_of, LlmDriver, LlmRequest, LlmResponse, Usage};
 use crate::llm::sse;
 
 pub struct OpenAiResponsesDriver {
@@ -18,10 +17,7 @@ pub struct OpenAiResponsesDriver {
 
 impl OpenAiResponsesDriver {
     pub fn new(conn: Connection) -> Self {
-        let client = reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(conn.connect_timeout.unwrap_or(10) as u64))
-            .build()
-            .unwrap_or_default();
+        let client = client_for(&conn);
         Self { conn, client }
     }
 
@@ -71,7 +67,7 @@ impl LlmDriver for OpenAiResponsesDriver {
                     .collect::<String>()
             })
             .unwrap_or_default();
-        if text.is_empty() {
+        if text.trim().is_empty() {
             return Err(LlmError::Empty);
         }
         Ok(text)
@@ -79,29 +75,39 @@ impl LlmDriver for OpenAiResponsesDriver {
 
     async fn stream(&self, req: &LlmRequest) -> Result<LlmResponse, LlmError> {
         let mut body = self.build_body(&req.system, &req.user);
-        body["stream"] = serde_json::Value::Bool(true);
+        body["stream"] = json!(true);
         let mut text = String::new();
         let mut usage = Usage::default();
+        let mut done = false;
         sse::post_sse(
             &self.client,
             &format!("{}/responses", base_of(&self.conn)),
             self.headers(),
             &body,
-            timeout_of(&self.conn),
             |v| match v.get("type").and_then(|t| t.as_str()) {
+                Some("response.failed") | Some("response.incomplete") | Some("error") => {
+                    let snippet: String = v.to_string().chars().take(500).collect();
+                    Err(LlmError::Transport(format!("provider stream error: {snippet}")))
+                }
                 Some("response.output_text.delta") => {
                     if let Some(t) = v["delta"].as_str() {
                         text.push_str(t);
                     }
+                    Ok(())
                 }
                 Some("response.completed") => {
                     usage.input_tokens = v["response"]["usage"]["input_tokens"].as_u64();
                     usage.output_tokens = v["response"]["usage"]["output_tokens"].as_u64();
+                    done = true;
+                    Ok(())
                 }
-                _ => {}
+                _ => Ok(()),
             },
         )
         .await?;
+        if !done {
+            return Err(LlmError::Transport("stream ended before completion".into()));
+        }
         if text.trim().is_empty() {
             return Err(LlmError::Empty);
         }

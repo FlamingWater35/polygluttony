@@ -4,11 +4,10 @@
 use async_trait::async_trait;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Value};
-use std::time::Duration;
 
 use crate::config::Connection;
 use crate::llm::error::LlmError;
-use crate::llm::{base_of, get_json, parse_model_ids, post_json, timeout_of, LlmDriver, LlmRequest, LlmResponse, Usage};
+use crate::llm::{base_of, client_for, get_json, parse_model_ids, post_json, timeout_of, LlmDriver, LlmRequest, LlmResponse, Usage};
 use crate::llm::sse;
 
 pub struct OpenAiDriver {
@@ -18,10 +17,7 @@ pub struct OpenAiDriver {
 
 impl OpenAiDriver {
     pub fn new(conn: Connection) -> Self {
-        let client = reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(conn.connect_timeout.unwrap_or(10) as u64))
-            .build()
-            .unwrap_or_default();
+        let client = client_for(&conn);
         Self { conn, client }
     }
 
@@ -58,7 +54,7 @@ impl LlmDriver for OpenAiDriver {
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_string();
-        if text.is_empty() {
+        if text.trim().is_empty() {
             return Err(LlmError::Empty);
         }
         Ok(text)
@@ -66,27 +62,42 @@ impl LlmDriver for OpenAiDriver {
 
     async fn stream(&self, req: &LlmRequest) -> Result<LlmResponse, LlmError> {
         let mut body = self.build_body(&req.system, &req.user);
-        body["stream"] = serde_json::Value::Bool(true);
+        body["stream"] = json!(true);
         body["stream_options"] = json!({"include_usage": true});
         let mut text = String::new();
         let mut usage = Usage::default();
+        let mut done = false;
         sse::post_sse(
             &self.client,
             &format!("{}/chat/completions", base_of(&self.conn)),
             self.headers(),
             &body,
-            timeout_of(&self.conn),
             |v| {
+                // Provider error object embedded in a chunk.
+                if v.get("error").is_some() {
+                    let snippet: String = v.to_string().chars().take(500).collect();
+                    return Err(LlmError::Transport(format!("provider stream error: {snippet}")));
+                }
                 if let Some(t) = v["choices"][0]["delta"]["content"].as_str() {
                     text.push_str(t);
                 }
+                // A chunk with a non-null finish_reason signals completion.
+                if v["choices"][0]["finish_reason"].is_string() {
+                    done = true;
+                }
+                // The final include_usage chunk has choices:[] and carries totals.
                 if let Some(u) = v.get("usage").filter(|u| !u.is_null()) {
                     usage.input_tokens = u["prompt_tokens"].as_u64();
                     usage.output_tokens = u["completion_tokens"].as_u64();
+                    done = true;
                 }
+                Ok(())
             },
         )
         .await?;
+        if !done {
+            return Err(LlmError::Transport("stream ended before completion".into()));
+        }
         if text.trim().is_empty() {
             return Err(LlmError::Empty);
         }
@@ -153,10 +164,12 @@ mod tests {
     #[tokio::test]
     async fn stream_accumulates_chunks_and_usage() {
         let server = MockServer::start().await;
+        // The real include_usage final chunk has choices:[] (empty array) and carries usage.
         let sse_body = concat!(
-            "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"}}]}\n\n",
-            "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"}}]}\n\n",
-            "data: {\"choices\":[{\"delta\":{}}],\"usage\":{\"prompt_tokens\":8,\"completion_tokens\":4}}\n\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"},\"finish_reason\":null}]}\n\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"},\"finish_reason\":null}]}\n\n",
+            "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
+            "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":8,\"completion_tokens\":4}}\n\n",
             "data: [DONE]\n\n",
         );
         Mock::given(method("POST"))
