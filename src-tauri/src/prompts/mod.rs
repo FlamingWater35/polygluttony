@@ -78,7 +78,7 @@ tone (Standard, Xianxia, Wuxia, Comedic, Funny — each editable under Tones).";
 const SRC_LANG_DESC: &str = "Replaced with the source language name, e.g. \"Chinese\".";
 const TGT_LANG_DESC: &str = "Replaced with the target language name, e.g. \"English\".";
 
-const ENTRIES: [Entry; 17] = [
+static ENTRIES: [Entry; 17] = [
     Entry {
         id: PromptId::TranslateZhEn,
         name: "Chinese → English",
@@ -249,8 +249,31 @@ of the personalize context box in Glossary (\"Unknown\" when empty).",
     },
 ];
 
+/// Exhaustive by construction: adding a `PromptId` variant without a catalog
+/// entry is a compile error, and the test below pins each arm to the entry
+/// with the matching id.
 pub fn entry(id: PromptId) -> &'static Entry {
-    ENTRIES.iter().find(|e| e.id == id).expect("every PromptId has a catalog entry")
+    let e = match id {
+        PromptId::TranslateZhEn => &ENTRIES[0],
+        PromptId::TranslateGeneric => &ENTRIES[1],
+        PromptId::ToneStandard => &ENTRIES[2],
+        PromptId::ToneXianxia => &ENTRIES[3],
+        PromptId::ToneWuxia => &ENTRIES[4],
+        PromptId::ToneComedic => &ENTRIES[5],
+        PromptId::ToneFunny => &ENTRIES[6],
+        PromptId::GlossaryExtract => &ENTRIES[7],
+        PromptId::GlossaryNormalizeCharacters => &ENTRIES[8],
+        PromptId::GlossaryNormalizeCultivation => &ENTRIES[9],
+        PromptId::GlossaryNormalizeSkills => &ENTRIES[10],
+        PromptId::GlossaryNormalizeLocations => &ENTRIES[11],
+        PromptId::GlossaryNormalizeItems => &ENTRIES[12],
+        PromptId::GlossaryNormalizeOrganizations => &ENTRIES[13],
+        PromptId::GlossaryPersonalize => &ENTRIES[14],
+        PromptId::ReferenceExtract => &ENTRIES[15],
+        PromptId::Verify => &ENTRIES[16],
+    };
+    debug_assert!(e.id == id, "ENTRIES order must match the entry() arms");
+    e
 }
 
 pub fn default_text(id: PromptId) -> &'static str {
@@ -491,11 +514,15 @@ mod tests {
     }
 
     #[test]
-    fn entries_cover_all_ids_with_unique_files() {
+    fn entries_cover_all_ids_with_unique_files_and_correct_arms() {
         let files: std::collections::BTreeSet<&str> = ENTRIES.iter().map(|e| e.file).collect();
         assert_eq!(files.len(), ENTRIES.len(), "override paths must be unique");
-        // entry() panics if an id is missing; touch all 17 via list_meta.
-        assert_eq!(list_meta(Path::new("/nonexistent")).len(), 17);
+        // Every entry's id round-trips through entry() to itself — pins the
+        // match-arm indices to the ENTRIES order (the debug_assert's release-
+        // mode counterpart) and implies id uniqueness.
+        for e in &ENTRIES {
+            assert!(std::ptr::eq(entry(e.id), e), "{:?}: entry() returns the wrong Entry", e.id);
+        }
     }
 
     #[test]
@@ -508,6 +535,10 @@ mod tests {
         std::fs::create_dir_all(dir.path().join("tones")).unwrap();
         std::fs::write(dir.path().join("tones/xianxia.txt"), "custom tone").unwrap();
         assert_eq!(resolve(PromptId::ToneXianxia, dir.path()).unwrap(), "custom tone");
+        // list_meta reflects the override as modified=true (and others stay false).
+        let meta = list_meta(dir.path());
+        assert!(meta.iter().find(|m| m.id == PromptId::ToneXianxia).unwrap().modified);
+        assert!(!meta.iter().find(|m| m.id == PromptId::Verify).unwrap().modified);
     }
 
     #[test]
