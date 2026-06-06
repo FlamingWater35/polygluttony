@@ -261,39 +261,35 @@ impl Glossary {
         g
     }
 
+    /// Build the `{"world_type", "terms"}` JSON document value shared by both
+    /// serialization methods.
+    fn to_value(&self) -> serde_json::Value {
+        let mut terms = serde_json::Map::new();
+        for c in CATEGORIES {
+            let m: serde_json::Map<String, serde_json::Value> = self
+                .category(c)
+                .iter()
+                .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                .collect();
+            terms.insert(c.to_string(), serde_json::Value::Object(m));
+        }
+        serde_json::json!({ "world_type": self.world_type, "terms": terms })
+    }
+
     /// Pretty-printed glossary.json — the file is meant to be hand-editable
     /// ("Open in editor", O15), so we write indent-2 like the Python tool.
     // consumed by save_folder_glossary (io.rs)
     #[allow(dead_code)]
     pub fn to_json_pretty(&self) -> String {
-        let mut terms = serde_json::Map::new();
-        for c in CATEGORIES {
-            let m: serde_json::Map<String, serde_json::Value> = self
-                .category(c)
-                .iter()
-                .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
-                .collect();
-            terms.insert(c.to_string(), serde_json::Value::Object(m));
-        }
-        let doc = serde_json::json!({ "world_type": self.world_type, "terms": terms });
-        serde_json::to_string_pretty(&doc).expect("serializable")
+        serde_json::to_string_pretty(&self.to_value()).expect("serializable")
     }
 
-    /// `{"world_type": ..., "terms": {category: {term: translation}}}` —
-    /// byte-compatible with the Python tool's `glossary.json`.
-    // Step 4 (Glossary view): commands/glossary will call this to persist the file.
+    /// `{"world_type": ..., "terms": {category: {term: translation}}}` — same
+    /// shape as the Python tool's `glossary.json` (key order differs).
+    // Compact form used by personalize prompts later (not yet called).
     #[allow(dead_code)]
     pub fn to_json(&self) -> String {
-        let mut terms = serde_json::Map::new();
-        for c in CATEGORIES {
-            let m: serde_json::Map<String, serde_json::Value> = self
-                .category(c)
-                .iter()
-                .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
-                .collect();
-            terms.insert(c.to_string(), serde_json::Value::Object(m));
-        }
-        serde_json::json!({ "world_type": self.world_type, "terms": terms }).to_string()
+        self.to_value().to_string()
     }
 
     /// Lenient parse (`glossary.py:210-241`): unknown/garbage values dropped,
@@ -301,18 +297,12 @@ impl Glossary {
     pub fn from_json(s: &str) -> Option<Glossary> {
         let v: serde_json::Value = serde_json::from_str(s).ok()?;
         let world = v.get("world_type").and_then(|w| w.as_str()).unwrap_or("xianxia");
-        let mut g = Glossary::new(world);
-        if let Some(terms) = v.get("terms").and_then(|t| t.as_object()) {
-            for c in CATEGORIES {
-                if let Some(cat) = terms.get(c).and_then(|x| x.as_object()) {
-                    for (k, val) in cat {
-                        if let Some(s) = val.as_str() {
-                            g.category_mut(c).insert(k.clone(), s.to_string());
-                        }
-                    }
-                }
-            }
-        }
+        // Re-use from_terms_value for the inner terms loop (it accepts the
+        // whole doc and finds "terms" itself, or treats it as bare categories).
+        let mut g = Glossary::from_terms_value(&v, world);
+        // from_terms_value looks for "terms" first — which is what we have.
+        // Patch world_type since from_terms_value uses the caller-supplied one.
+        g.world_type = world.to_string();
         Some(g)
     }
 }

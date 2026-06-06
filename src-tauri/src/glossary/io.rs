@@ -13,9 +13,10 @@ pub fn load_folder_glossary(folder: &Path) -> Option<Glossary> {
     Glossary::from_json(&text)
 }
 
-/// Atomic write: temp file in the same dir + rename, pretty JSON (the file is
-/// user-editable via "Open in editor"). Python wrote in place — a crash
-/// mid-write could corrupt the glossary; rename can't.
+/// Crash-safe write: temp file in the same dir + rename, pretty JSON (the
+/// file is user-editable via "Open in editor"). rename is atomic against
+/// process crashes; we deliberately skip fsync — a power-loss-torn glossary
+/// is recoverable by rebuilding.
 // consumed by commands/glossary (later step-4 task)
 #[allow(dead_code)]
 pub fn save_folder_glossary(folder: &Path, glossary: &Glossary) -> AppResult<()> {
