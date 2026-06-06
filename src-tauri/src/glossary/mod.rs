@@ -12,7 +12,7 @@
 //! - `world_detector` — keyword-heuristic world-type detection (no LLM)
 //! - `reference`   — reference terminology types, cache, ref/ discovery, async extractor (O11)
 //! - `prompts`     — prompt assembly for extraction, normalize, and personalize passes
-//! - `build`       — cross-file batch helper (`glossary_batches`) shared with O10 orchestrator
+//! - `build`       — O10 build orchestrator (`build_glossary`) + cross-file batch helper
 //! - `normalize`   — per-category normalize pass (`normalize_pass`, O12)
 //! - `personalize` — personalization pass (`personalize_pass`, build step 8)
 
