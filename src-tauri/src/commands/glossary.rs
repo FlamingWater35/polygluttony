@@ -125,7 +125,7 @@ pub async fn import_reference_files(
     if count > 0 {
         reference::save_cache(&dir, &terms)?;
     }
-    Ok(ReferenceSummary { count, files_processed, errors })
+    Ok(ReferenceSummary { count, files_processed, cancelled: cancel.is_cancelled(), errors })
 }
 
 #[tauri::command]

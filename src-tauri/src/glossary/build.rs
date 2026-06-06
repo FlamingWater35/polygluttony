@@ -27,7 +27,6 @@ use crate::glossary::diff::GlossaryDiff;
 use crate::glossary::io::{load_folder_glossary, save_folder_glossary};
 use crate::glossary::model::Glossary;
 use crate::glossary::{normalize, personalize, prompts, reference};
-use crate::llm::error::{LlmError, CANCELLED_MSG};
 use crate::llm::service::LlmService;
 use crate::llm::LlmRequest;
 use crate::models::language_pair::LanguagePair;
@@ -71,12 +70,6 @@ pub(crate) fn merged_with_existing(existing: Option<&Glossary>, new_terms: &Glos
         }
         None => new_terms.clone(),
     }
-}
-
-/// After abort/cancel, batches still queued in the service fail with this
-/// transport error — consequences of the stop, not causes worth recording.
-fn is_cancel_noise(e: &LlmError) -> bool {
-    matches!(e, LlmError::Transport(msg) if msg == CANCELLED_MSG)
 }
 
 async fn phase(tx: &mpsc::Sender<GlossaryEvent>, p: GlossaryPhase, detail: Option<String>) {
@@ -258,7 +251,7 @@ pub async fn build_glossary(
                 ));
             }
             Err(e) => {
-                let noise = (aborted || job.cancel.is_cancelled()) && is_cancel_noise(&e);
+                let noise = (aborted || job.cancel.is_cancelled()) && e.is_cancelled();
                 if !noise {
                     log(&tx, LogLevel::Warning, format!("batch {n}/{total} failed: {e}")).await;
                     errors.push(format!("batch {n}/{total} failed: {e}"));
