@@ -58,7 +58,7 @@ export function StatusBar() {
       </span>
       <span className="flex-1" />
       {activity ? (
-        <button type="button" onClick={() => void navigate({ to: activity.to })}>
+        <button type="button" className="cursor-pointer" onClick={() => void navigate({ to: activity.to })}>
           <StatusChip variant="alert">⏳ {activity.label}</StatusChip>
         </button>
       ) : null}

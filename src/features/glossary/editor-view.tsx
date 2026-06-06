@@ -299,9 +299,9 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
 
         {/* Terms table */}
         {sections.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No terms match "{search}".</p>
+          <p className="text-sm text-muted-foreground">No terms match &#x201C;{search}&#x201D;.</p>
         ) : (
-          <table className="w-full border-collapse text-[12.5px]">
+          <table className="w-full table-fixed border-collapse text-[12.5px]">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                 <th className="w-[45%] px-2 py-1.5 font-semibold">{sourceName}</th>
