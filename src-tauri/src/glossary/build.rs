@@ -158,8 +158,8 @@ pub async fn build_glossary(
     // Progress is emitted by each future ON COMPLETION (shared atomic counter)
     // so the bar moves the moment ANY batch finishes — results are still
     // CONSUMED in batch order below for deterministic first-wins merging.
-    // Near-simultaneous completions can deliver counts out of order; the
-    // frontend store clamps with max().
+    // Near-simultaneous completions can deliver counts out of order (the
+    // frontend store clamps these — see the UX-overhaul store changes).
     // FuturesOrdered: structured concurrency (drop-cancellation, no 'static
     // bound, no panic arm); strictly-in-order consumption means a slow batch 1
     // head-of-line-blocks incremental SAVES of later batches — deterministic
@@ -649,7 +649,8 @@ mod tests {
             run_and_collect(job(dir.path(), vec!["e1.ass".into()], cancel), &svc, None).await;
         assert_eq!(s.batches_processed, 3);
         // Progress comes from completions: initial 0, then 1..=3 EXACTLY once
-        // each (any arrival order — the frontend store clamps with max()).
+        // each (any arrival order — the frontend store clamps these; see the
+        // UX-overhaul store changes).
         // Strict multiset equality also proves there is a single emission
         // source — a second one would duplicate counts and fail this.
         let mut dones: Vec<u32> = events

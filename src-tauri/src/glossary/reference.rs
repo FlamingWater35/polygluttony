@@ -254,6 +254,7 @@ fn collect_dialogue_lines(files: &[PathBuf]) -> (Vec<String>, u32) {
 /// lines, parallel via `LlmService` (its retries/AIMD replace Python's
 /// BatchManager), merge sorted by batch index, dedupe. Both LLM failures and
 /// unparseable responses are recorded in `errors` and skipped — NEVER fatal.
+/// Cancellation-caused failures are silently dropped (not recorded in `errors`).
 /// Returns (terms, files_processed, errors).
 pub async fn extract_from_files(
     svc: &LlmService,
@@ -565,8 +566,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         // batch limit 2 → ×0.7 → 1 line per batch → 2 batches for 2 lines.
         // HTTP 400 is non-retryable and non-auth: exactly one driver call per
-        // batch. Script order = join_all completion order (deterministic: no
-        // spawned tasks, no interleaving).
+        // batch. cap-1 service serializes driver calls in batch order, so
+        // FuturesOrdered delivers results in script order (deterministic).
         let f = write_ass(dir.path(), "e1.ass", &["line one", "line two"]);
         let d = ScriptedDriver::new(vec![
             Err(crate::llm::error::LlmError::Http { status: 400, body: "bad request".into() }),
