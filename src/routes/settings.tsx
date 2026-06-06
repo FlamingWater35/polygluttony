@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EmptyState } from "@/components/empty-state";
+import { SettingsPage } from "@/features/settings/settings-page";
 
 export const Route = createFileRoute("/settings")({
-  component: () => (
-    <EmptyState title="Settings" description="Coming soon." />
-  ),
+  component: SettingsPage,
 });
