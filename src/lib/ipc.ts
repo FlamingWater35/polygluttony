@@ -15,8 +15,8 @@ import type { GlossaryDoc } from "@/types/generated/GlossaryDoc";
 import type { NormalizeReview } from "@/types/generated/NormalizeReview";
 import type { ReferenceStatus } from "@/types/generated/ReferenceStatus";
 import type { ReferenceSummary } from "@/types/generated/ReferenceSummary";
-import type { WorldType } from "@/types/generated/WorldType";
 import type { ReferenceTerminology } from "@/types/generated/ReferenceTerminology";
+import type { WorldType } from "@/types/generated/WorldType";
 
 /**
  * Typed wrappers around the Rust core's Tauri commands. The webview never talks
