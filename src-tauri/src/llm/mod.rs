@@ -68,9 +68,15 @@ pub fn create_driver(conn: Connection) -> Box<dyn LlmDriver> {
     }
 }
 
-/// Integer-seconds `Retry-After` header; the HTTP-date form maps to `None`.
+/// Longest server-mandated pause we will honor; anything larger is a
+/// misbehaving server, not a real throttle hint.
+const RETRY_AFTER_CAP_SECS: u64 = 300;
+
+/// Integer-seconds `Retry-After` header, capped at [`RETRY_AFTER_CAP_SECS`];
+/// the HTTP-date form maps to `None`.
 pub(crate) fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> Option<u64> {
-    headers.get(reqwest::header::RETRY_AFTER)?.to_str().ok()?.trim().parse().ok()
+    let secs: u64 = headers.get(reqwest::header::RETRY_AFTER)?.to_str().ok()?.trim().parse().ok()?;
+    Some(secs.min(RETRY_AFTER_CAP_SECS))
 }
 
 /// POST JSON and return the parsed body, classifying failures into `LlmError`.
@@ -162,4 +168,35 @@ pub(crate) fn client_for(conn: &Connection) -> reqwest::Client {
         .read_timeout(read)
         .build()
         .expect("reqwest client")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use reqwest::header::{HeaderMap, HeaderValue, RETRY_AFTER};
+
+    fn headers_with(v: &str) -> HeaderMap {
+        let mut h = HeaderMap::new();
+        h.insert(RETRY_AFTER, HeaderValue::from_str(v).unwrap());
+        h
+    }
+
+    #[test]
+    fn retry_after_parses_integer_seconds() {
+        assert_eq!(retry_after_secs(&headers_with("7")), Some(7));
+        assert_eq!(retry_after_secs(&headers_with(" 42 ")), Some(42));
+    }
+
+    #[test]
+    fn retry_after_rejects_non_integer_forms() {
+        assert_eq!(retry_after_secs(&headers_with("Fri, 07 Jun 2026 12:00:00 GMT")), None);
+        assert_eq!(retry_after_secs(&headers_with("1.5")), None);
+        assert_eq!(retry_after_secs(&headers_with("-1")), None);
+        assert_eq!(retry_after_secs(&HeaderMap::new()), None);
+    }
+
+    #[test]
+    fn retry_after_caps_absurd_values() {
+        assert_eq!(retry_after_secs(&headers_with("9999999")), Some(RETRY_AFTER_CAP_SECS));
+    }
 }
