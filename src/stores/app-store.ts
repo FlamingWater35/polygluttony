@@ -11,7 +11,6 @@ interface ProjectState {
   fileCount: number;
   dialogueLineCount: number;
   hasUntranslated: boolean;
-  hasTranslated: boolean;
   glossaryTerms: number | null;
 }
 
@@ -24,7 +23,6 @@ interface AppState {
   fileCount: number;
   dialogueLineCount: number;
   hasUntranslated: boolean;
-  hasTranslated: boolean;
   glossaryTerms: number | null;
   activeConnection: string | null;
   hasUsableConnection: boolean;
@@ -46,7 +44,6 @@ export const useAppStore = create<AppState>((set) => ({
   fileCount: 0,
   dialogueLineCount: 0,
   hasUntranslated: false,
-  hasTranslated: false,
   glossaryTerms: null,
   activeConnection: null,
   hasUsableConnection: false,
@@ -60,7 +57,6 @@ export const useAppStore = create<AppState>((set) => ({
       fileCount: 0,
       dialogueLineCount: 0,
       hasUntranslated: false,
-      hasTranslated: false,
       glossaryTerms: null,
     }),
   setActiveConnection: (activeConnection) => set({ activeConnection }),

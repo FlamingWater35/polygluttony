@@ -162,14 +162,6 @@ export function TranslatePage() {
           </>
         ) : null}
         <span className="text-muted-foreground">.</span>
-        {warn > 0 ? (
-          <span
-            className="ml-3 cursor-not-allowed text-xs text-muted-foreground line-through"
-            title="Verify view arrives in a later step"
-          >
-            Review issues →
-          </span>
-        ) : null}
       </div>
     );
   }

@@ -1,6 +1,5 @@
 import {
   BookOpen,
-  CheckCircle,
   Folder,
   Gear,
   Lightning,
@@ -25,7 +24,6 @@ const ITEMS: RailItem[] = [
   { to: "/project", label: "Project", icon: Folder, group: "workflow", needsFolder: true },
   { to: "/glossary", label: "Glossary", icon: BookOpen, group: "workflow", needsFolder: true },
   { to: "/translate", label: "Translate", icon: Play, group: "workflow", needsFolder: true },
-  { to: "/verify", label: "Verify", icon: CheckCircle, group: "workflow", needsFolder: true },
   { to: "/connections", label: "Connections", icon: Lightning, group: "setup" },
   { to: "/settings", label: "Settings", icon: Gear, group: "setup" },
   { to: "/help", label: "Help", icon: Question, group: "setup" },
@@ -35,7 +33,6 @@ export function NavRail() {
   const workdir = useAppStore((s) => s.workdir);
   const hasUsableConnection = useAppStore((s) => s.hasUsableConnection);
   const hasUntranslated = useAppStore((s) => s.hasUntranslated);
-  const hasTranslated = useAppStore((s) => s.hasTranslated);
   const glossaryTerms = useAppStore((s) => s.glossaryTerms);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -47,7 +44,6 @@ export function NavRail() {
       if (!hasUsableConnection) return "Connect an AI provider";
       if (!hasUntranslated) return "No untranslated files in this folder";
     }
-    if (item.to === "/verify" && !hasTranslated) return "Translate something first";
     return null;
   };
 
