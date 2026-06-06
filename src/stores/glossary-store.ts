@@ -6,7 +6,10 @@ import type { GlossaryEvent } from "@/types/generated/GlossaryEvent"
 import type { GlossaryPhase } from "@/types/generated/GlossaryPhase"
 import type { LogLevel } from "@/types/generated/LogLevel"
 import type { ReferenceSummary } from "@/types/generated/ReferenceSummary"
+import type { ProjectView } from "@/types/generated/ProjectView"
 import { useAppStore } from "@/stores/app-store"
+import { queryClient } from "@/lib/query-client"
+import { projectKey } from "@/features/project/use-project"
 
 /** HH:MM:SS receive-time stamp for log lines (close enough to emit time). */
 const now = () => new Date().toLocaleTimeString("en-GB", { hour12: false })
@@ -114,15 +117,24 @@ export const useGlossaryRun = create<GlossaryRunStore>((set) => ({
               { at: now(), level: e.level, message: e.message },
             ],
           }
-        case "done":
+        case "done": {
           // Keep the rail badge live (cross-store side effect, deliberate).
           useAppStore.getState().setGlossaryTerms(e.summary.terms_final)
+          // Patch the cached ProjectView (staleTime: Infinity) so Translate's
+          // "(N terms)" estimate is fresh even when no glossary view is mounted.
+          // Patch, not invalidate — open_folder is a full re-analyze.
+          if (s.folder) {
+            queryClient.setQueryData<ProjectView>(projectKey(s.folder), (v) =>
+              v ? { ...v, glossary_terms: e.summary.terms_final || null } : v,
+            )
+          }
           return {
             busy: null,
             summary: e.summary,
             lastDiff: e.summary.diff.has_changes ? e.summary.diff : s.lastDiff,
             fileTick: s.fileTick + 1,
           }
+        }
         case "error":
           toast.error(e.message)
           return {
