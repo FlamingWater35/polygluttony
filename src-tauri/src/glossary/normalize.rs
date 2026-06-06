@@ -174,7 +174,7 @@ mod tests {
         // cap 1 + non-retryable error → one driver call per category, in
         // CATEGORIES order (characters before locations) — deterministic.
         let d = ScriptedDriver::new(vec![
-            Err(LlmError::Http { status: 400, body: "bad".into() }), // characters fails
+            Err(LlmError::Http { status: 400, body: "bad".into(), retry_after: None }), // characters fails
             Ok(r#"{"华山":"Mt. Hua"}"#.into()),                       // locations succeeds
         ]);
         let out = normalize_pass(&svc(d, 1), &g, &gtx()).await;

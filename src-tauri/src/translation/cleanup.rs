@@ -191,6 +191,7 @@ mod tests {
         let (svc, driver) = service(vec![Err(crate::llm::error::LlmError::Http {
             status: 401,
             body: "no".into(),
+            retry_after: None,
         })]);
         let sources: BTreeMap<u32, String> = [(1, "你好".to_string())].into();
         let mut translations: BTreeMap<u32, String> = [(1, "全是中文的翻译".to_string())].into();

@@ -68,6 +68,11 @@ pub fn create_driver(conn: Connection) -> Box<dyn LlmDriver> {
     }
 }
 
+/// Integer-seconds `Retry-After` header; the HTTP-date form maps to `None`.
+pub(crate) fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> Option<u64> {
+    headers.get(reqwest::header::RETRY_AFTER)?.to_str().ok()?.trim().parse().ok()
+}
+
 /// POST JSON and return the parsed body, classifying failures into `LlmError`.
 pub(crate) async fn post_json(
     client: &reqwest::Client,
@@ -86,9 +91,10 @@ pub(crate) async fn post_json(
         .map_err(|e| LlmError::Transport(e.to_string()))?;
     let status = resp.status();
     if !status.is_success() {
+        let retry_after = retry_after_secs(resp.headers());
         let body = resp.text().await.unwrap_or_default();
         let snippet: String = body.chars().take(500).collect();
-        return Err(LlmError::Http { status: status.as_u16(), body: snippet });
+        return Err(LlmError::Http { status: status.as_u16(), body: snippet, retry_after });
     }
     resp.json::<Value>()
         .await
@@ -111,9 +117,10 @@ pub(crate) async fn get_json(
         .map_err(|e| LlmError::Transport(e.to_string()))?;
     let status = resp.status();
     if !status.is_success() {
+        let retry_after = retry_after_secs(resp.headers());
         let body = resp.text().await.unwrap_or_default();
         let snippet: String = body.chars().take(500).collect();
-        return Err(LlmError::Http { status: status.as_u16(), body: snippet });
+        return Err(LlmError::Http { status: status.as_u16(), body: snippet, retry_after });
     }
     resp.json::<Value>()
         .await

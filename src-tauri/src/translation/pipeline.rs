@@ -776,7 +776,7 @@ mod tests {
         let src = ass_source(&["你好", "再见"]);
         let (result, _, driver, _dir) = run_pipeline(
             &src,
-            vec![Err(crate::llm::error::LlmError::Http { status: 401, body: "no".into() })],
+            vec![Err(crate::llm::error::LlmError::Http { status: 401, body: "no".into(), retry_after: None })],
         )
         .await;
         assert!(!result.success);

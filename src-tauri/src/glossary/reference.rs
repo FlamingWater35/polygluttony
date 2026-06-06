@@ -571,7 +571,7 @@ mod tests {
         // FuturesOrdered delivers results in script order (deterministic).
         let f = write_ass(dir.path(), "e1.ass", &["line one", "line two"]);
         let d = ScriptedDriver::new(vec![
-            Err(crate::llm::error::LlmError::Http { status: 400, body: "bad request".into() }),
+            Err(crate::llm::error::LlmError::Http { status: 400, body: "bad request".into(), retry_after: None }),
             Ok(r#"{"locations":["Qingyang Town"]}"#.into()),
         ]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);

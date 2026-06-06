@@ -11,7 +11,7 @@ pub const CANCELLED_MSG: &str = "run cancelled";
 pub enum LlmError {
     /// Non-2xx HTTP response, carrying the status + a body snippet.
     #[error("HTTP {status}: {body}")]
-    Http { status: u16, body: String },
+    Http { status: u16, body: String, retry_after: Option<u64> },
     /// Transport-level failure (timeout, connection reset, DNS).
     #[error("request error: {0}")]
     Transport(String),
@@ -46,6 +46,16 @@ impl LlmError {
     pub fn is_cancelled(&self) -> bool {
         matches!(self, LlmError::Transport(msg) if msg == CANCELLED_MSG)
     }
+
+    /// Server-provided `Retry-After`, when the throttling response carried one.
+    pub fn retry_after(&self) -> Option<std::time::Duration> {
+        match self {
+            LlmError::Http { retry_after: Some(s), .. } => {
+                Some(std::time::Duration::from_secs(*s))
+            }
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -55,7 +65,7 @@ mod tests {
     #[test]
     fn auth_errors_are_not_retryable() {
         for s in [401u16, 403, 404] {
-            let e = LlmError::Http { status: s, body: "x".into() };
+            let e = LlmError::Http { status: s, body: "x".into(), retry_after: None };
             assert!(!e.is_retryable(), "{s} should not retry");
             assert!(e.is_auth(), "{s} is auth");
         }
@@ -64,7 +74,7 @@ mod tests {
     #[test]
     fn transient_errors_are_retryable() {
         for s in [429u16, 500, 502, 503, 504] {
-            assert!(LlmError::Http { status: s, body: "x".into() }.is_retryable());
+            assert!(LlmError::Http { status: s, body: "x".into(), retry_after: None }.is_retryable());
         }
         assert!(LlmError::Transport("timed out".into()).is_retryable());
     }
@@ -72,5 +82,14 @@ mod tests {
     #[test]
     fn parse_errors_are_not_retryable() {
         assert!(!LlmError::Parse("bad json".into()).is_retryable());
+    }
+
+    #[test]
+    fn retry_after_helper_maps_seconds() {
+        let e = LlmError::Http { status: 429, body: "x".into(), retry_after: Some(7) };
+        assert_eq!(e.retry_after(), Some(std::time::Duration::from_secs(7)));
+        let none = LlmError::Http { status: 429, body: "x".into(), retry_after: None };
+        assert_eq!(none.retry_after(), None);
+        assert_eq!(LlmError::Empty.retry_after(), None);
     }
 }

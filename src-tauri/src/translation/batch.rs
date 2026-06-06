@@ -257,6 +257,7 @@ mod tests {
         let driver = ScriptedDriver::new(vec![Err(crate::llm::error::LlmError::Http {
             status: 401,
             body: "no".into(),
+            retry_after: None,
         })]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);

@@ -477,7 +477,7 @@ mod tests {
         write_ass(dir.path(), "e1.ass", &["一", "二"]);
         let cancel = CancellationToken::new();
         let d = ScriptedDriver::new(vec![
-            Err(LlmError::Http { status: 400, body: "bad request".into() }), // batch 1: non-retryable, one call
+            Err(LlmError::Http { status: 400, body: "bad request".into(), retry_after: None }), // batch 1: non-retryable, one call
             Ok(r#"{"characters":{"林动":"Lin Dong"}}"#.into()),              // batch 2 ok
         ]);
         let svc = svc1(d, cancel.clone());
@@ -504,7 +504,7 @@ mod tests {
         let cancel = CancellationToken::new();
         let d = ScriptedDriver::new(vec![
             Ok(r#"{"characters":{"林动":"Lin Dong"}}"#.into()), // batch 1 ok
-            Err(LlmError::Http { status: 401, body: "bad key".into() }), // batch 2: auth, no retry
+            Err(LlmError::Http { status: 401, body: "bad key".into(), retry_after: None }), // batch 2: auth, no retry
         ]);
         let svc = svc1(d, cancel.clone());
         let (_events, s) =
@@ -532,6 +532,7 @@ mod tests {
         let d = ScriptedDriver::new(vec![Err(LlmError::Http {
             status: 401,
             body: "bad key".into(),
+            retry_after: None,
         })]);
         let svc = svc1(d, cancel.clone());
         let (_events, s) =

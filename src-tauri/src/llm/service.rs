@@ -154,9 +154,9 @@ impl LlmService {
                 r = self.driver.stream(&req) => r,
             };
             let retry_after = match &outcome {
-                Err(e) if is_throttle(e) => Some(Duration::from_millis(
+                Err(e) if is_throttle(e) => Some(e.retry_after().unwrap_or(Duration::from_millis(
                     BASE_BACKOFF_MS * 2u64.pow(attempt - 1),
-                )),
+                ))),
                 _ => None,
             };
             self.release(&outcome, retry_after).await;
@@ -254,6 +254,7 @@ mod tests {
         let d = ScriptedDriver::new(vec![Err(LlmError::Http {
             status: 401,
             body: "no".into(),
+            retry_after: None,
         })]);
         let s = service(d.clone(), 2);
         let err = s.request(req()).await.unwrap_err();
@@ -264,7 +265,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn throttle_halves_limit_and_success_streak_restores() {
         let d = ScriptedDriver::new(vec![
-            Err(LlmError::Http { status: 429, body: "slow down".into() }),
+            Err(LlmError::Http { status: 429, body: "slow down".into(), retry_after: None }),
             Ok("1".into()),
             Ok("2".into()),
             Ok("3".into()),
@@ -301,6 +302,21 @@ mod tests {
         let (r1, r2) = tokio::join!(s1.request(req()), s2.request(req()));
         assert!(r1.is_ok() && r2.is_ok());
         assert_eq!(d.call_count(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn throttle_pause_honors_retry_after_header() {
+        let d = ScriptedDriver::new(vec![
+            Err(LlmError::Http { status: 429, body: "slow".into(), retry_after: Some(7) }),
+            Ok("ok".into()),
+        ]);
+        let s = service(d, 2);
+        let t0 = Instant::now();
+        let resp = s.request(req()).await.unwrap();
+        assert_eq!(resp.text, "ok");
+        // The retry's acquire must wait out the server-mandated 7s pause window;
+        // computed backoff alone would be ~1s.
+        assert!(t0.elapsed() >= Duration::from_secs(7), "elapsed {:?}", t0.elapsed());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

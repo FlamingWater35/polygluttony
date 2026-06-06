@@ -72,7 +72,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn request_failure_returns_err() {
-        let d = ScriptedDriver::new(vec![Err(LlmError::Http { status: 401, body: "no".into() })]);
+        let d = ScriptedDriver::new(vec![Err(LlmError::Http { status: 401, body: "no".into(), retry_after: None })]);
         assert!(personalize_pass(&svc(d), &glossary(), "").await.is_err());
     }
 
