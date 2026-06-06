@@ -25,11 +25,13 @@ export function GlossaryPage() {
     enabled: !!workdir,
   });
 
-  // New folder → stale run state (errors/summary/diff) from the previous
-  // folder must not leak into this one's views. Never reset mid-run.
+  // Run state is global; a run (or its results) belongs to the folder it was
+  // started in. Reset only when the state belongs to a DIFFERENT folder —
+  // never on plain remounts (results of a run that finished while the user
+  // was on another view must survive), and never mid-run for this folder.
   useEffect(() => {
     const s = useGlossaryRun.getState();
-    if (!s.busy) s.reset();
+    if (s.folder !== null && s.folder !== workdir && !s.busy) s.reset();
   }, [workdir]);
 
   // O15 — watch glossary.json for external edits while this view is mounted.

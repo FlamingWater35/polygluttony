@@ -17,6 +17,8 @@ export interface GlossaryLogLine {
 
 interface GlossaryRunStore {
   busy: GlossaryOp | null
+  /** The folder this run (or its results) belongs to; null = never ran. */
+  folder: string | null
   phase: GlossaryPhase | null
   phaseDetail: string | null
   done: number
@@ -27,7 +29,7 @@ interface GlossaryRunStore {
   error: string | null
   /** Bumped on Done / FileChanged — the page refetches the glossary query. */
   fileTick: number
-  startOp: (op: GlossaryOp) => void
+  startOp: (op: GlossaryOp, folder: string) => void
   endOp: () => void
   setLastDiff: (d: GlossaryDiff) => void
   applyEvent: (e: GlossaryEvent) => void
@@ -36,6 +38,7 @@ interface GlossaryRunStore {
 
 export const useGlossaryRun = create<GlossaryRunStore>((set) => ({
   busy: null,
+  folder: null,
   phase: null,
   phaseDetail: null,
   done: 0,
@@ -48,9 +51,10 @@ export const useGlossaryRun = create<GlossaryRunStore>((set) => ({
 
   // busy is set optimistically before the invoke; a rejected invoke must call
   // endOp() or the page soft-locks (step-3 lesson).
-  startOp: (op) =>
+  startOp: (op, folder) =>
     set((s) => ({
       busy: op,
+      folder,
       phase: null,
       phaseDetail: null,
       done: 0,
@@ -103,7 +107,7 @@ export const useGlossaryRun = create<GlossaryRunStore>((set) => ({
 
   reset: () =>
     set({
-      busy: null, phase: null, phaseDetail: null, done: 0, total: 0,
+      busy: null, folder: null, phase: null, phaseDetail: null, done: 0, total: 0,
       logs: [], summary: null, lastDiff: null, error: null,
     }),
 }))

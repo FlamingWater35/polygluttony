@@ -52,7 +52,7 @@ export function CreateView({ view }: { view: ProjectView }) {
   // ── generate action ──────────────────────────────────────────────────────────
 
   const generate = () => {
-    startOp("build");
+    startOp("build", view.folder);
     // Rejected invoke = run never started; un-stick the page (step-3 lesson).
     ipc
       .startGlossaryBuild({
@@ -83,7 +83,7 @@ export function CreateView({ view }: { view: ProjectView }) {
 
     // A build may have started while the dialog was open — don't clobber it.
     if (useGlossaryRun.getState().busy !== null) return;
-    startOp("import");
+    startOp("import", view.folder);
     try {
       const result = await ipc.importReferenceFiles(view.folder, fileList);
       toast.success(
