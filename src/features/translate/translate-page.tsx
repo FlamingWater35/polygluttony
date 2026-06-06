@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Play, Stop, CaretDown, CaretRight } from "@phosphor-icons/react";
+import { Play, Stop } from "@phosphor-icons/react";
+import { LogToggleButton, LogPanel } from "@/components/log-drawer";
 import type { Tone } from "@/types/generated/Tone";
 import { ipc } from "@/lib/ipc";
 import { useAppStore } from "@/stores/app-store";
@@ -65,15 +66,6 @@ function FileStateChip({ state }: { state: FileStateKind }) {
     </span>
   );
 }
-
-// ── log level colors ──────────────────────────────────────────────────────────
-
-const LOG_COLOR: Record<string, string> = {
-  debug: "text-muted-foreground",
-  info: "text-foreground",
-  warning: "text-[color:var(--color-alert)]",
-  error: "text-[color:var(--color-danger)]",
-};
 
 // ── main component ────────────────────────────────────────────────────────────
 
@@ -368,42 +360,28 @@ export function TranslatePage() {
         <span className="flex-1" />
 
         {/* Log toggle */}
-        <button
-          type="button"
-          className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => setLogsOpen((o) => !o)}
-        >
-          {logsOpen ? <CaretDown className="size-3.5" /> : <CaretRight className="size-3.5" />}
-          Logs
-          {logs.length > 0 ? (
-            <span className="ml-1 tabular-nums text-[11px]">({logs.length})</span>
-          ) : null}
-        </button>
+        <LogToggleButton open={logsOpen} count={logs.length} onToggle={() => setLogsOpen((o) => !o)} />
       </div>
 
       {/* Log panel */}
       {logsOpen ? (
-        <div className="max-h-48 overflow-auto border-t border-border bg-[color:var(--color-bg-deepest)] px-4 py-3 font-mono text-[11px]">
-          {logs.length === 0 ? (
-            <span className="text-muted-foreground">No logs yet.</span>
-          ) : (
-            logs.map((entry, i) => (
-              <div key={i} className="flex gap-2 leading-5">
-                {entry.file ? (
-                  <span className="shrink-0 text-muted-foreground truncate max-w-[120px]">
-                    {entry.file}
-                  </span>
-                ) : (
-                  <span className="shrink-0 text-muted-foreground">run</span>
-                )}
-                <span className="shrink-0 text-muted-foreground/60">[{entry.phase}]</span>
-                <span className={LOG_COLOR[entry.level] ?? "text-foreground"}>
-                  {entry.message}
+        <LogPanel
+          lines={logs.map((entry) => ({
+            at: entry.at,
+            level: entry.level,
+            message: entry.message,
+            meta: [
+              entry.file ? (
+                <span key="f" className="shrink-0 text-muted-foreground truncate max-w-[120px]">
+                  {entry.file}
                 </span>
-              </div>
-            ))
-          )}
-        </div>
+              ) : (
+                <span key="f" className="shrink-0 text-muted-foreground">run</span>
+              ),
+              <span key="p" className="shrink-0 text-muted-foreground/60">[{entry.phase}]</span>,
+            ],
+          }))}
+        />
       ) : null}
     </div>
   );

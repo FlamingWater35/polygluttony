@@ -15,6 +15,7 @@ import type { GlossaryDoc } from "@/types/generated/GlossaryDoc";
 import type { NormalizeReview } from "@/types/generated/NormalizeReview";
 import type { ReferenceStatus } from "@/types/generated/ReferenceStatus";
 import type { ReferenceSummary } from "@/types/generated/ReferenceSummary";
+import type { ReferenceTerminology } from "@/types/generated/ReferenceTerminology";
 import type { WorldType } from "@/types/generated/WorldType";
 
 /**
@@ -108,6 +109,12 @@ export const ipc = {
   referenceStatus: (folder: string) =>
     invoke<ReferenceStatus>("reference_status", { folder }),
   clearReference: (folder: string) => invoke<void>("clear_reference", { folder }),
+  /** Cached reference terminology for the review screen (null = no cache). */
+  loadReference: (folder: string) =>
+    invoke<ReferenceTerminology | null>("load_reference", { folder }),
+  /** Persist review-screen pruning. */
+  saveReference: (folder: string, terms: ReferenceTerminology) =>
+    invoke<void>("save_reference", { folder, terms }),
   exportGlossary: (folder: string, dest: string) =>
     invoke<void>("export_glossary", { folder, dest }),
   /** O15 — open glossary.json in the OS default editor. */

@@ -1,23 +1,17 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { Sparkle, Books, Globe, X } from "@phosphor-icons/react";
+import { Sparkle, Books, Globe } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type { ProjectView } from "@/types/generated/ProjectView";
 import type { WorldType } from "@/types/generated/WorldType";
 import { ipc } from "@/lib/ipc";
 import { useGlossaryRun } from "@/stores/glossary-store";
+import { referenceKey, referenceStatusKey, useImportReference } from "./use-import-reference";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { HelpText } from "@/components/help-text";
 import { PageHeader } from "@/components/page-header";
-
-// ── reference status query key (shared with future editor) ────────────────────
-
-export function referenceStatusKey(folder: string) {
-  return ["reference-status", folder] as const;
-}
 
 // ── CreateView ────────────────────────────────────────────────────────────────
 
@@ -27,6 +21,7 @@ export function CreateView({ view }: { view: ProjectView }) {
   const busy = useGlossaryRun((s) => s.busy);
   const summary = useGlossaryRun((s) => s.summary);
   const error = useGlossaryRun((s) => s.error);
+  const openReview = useGlossaryRun((s) => s.openReview);
 
   // Generate card state
   const [normalize, setNormalize] = useState(true);
@@ -39,10 +34,15 @@ export function CreateView({ view }: { view: ProjectView }) {
     queryFn: ipc.personalizationStatus,
   });
 
-  // Reference import status chip
+  // Reference import status chip / summary
   const { data: refStatus } = useQuery({
     queryKey: referenceStatusKey(view.folder),
     queryFn: () => ipc.referenceStatus(view.folder),
+  });
+  const { data: refTerms } = useQuery({
+    queryKey: referenceKey(view.folder),
+    queryFn: () => ipc.loadReference(view.folder),
+    enabled: refStatus?.source === "cached",
   });
 
   const selected = view.prefs.selected_files;
@@ -71,40 +71,16 @@ export function CreateView({ view }: { view: ProjectView }) {
       });
   };
 
-  // ── import action ────────────────────────────────────────────────────────────
+  // ── import action (shared with the review screen's empty state) ─────────────
 
-  const importFiles = async () => {
-    const paths = await openDialog({
-      multiple: true,
-      filters: [{ name: "ASS subtitles", extensions: ["ass"] }],
-    });
-    if (!paths || (Array.isArray(paths) && paths.length === 0)) return;
-    const fileList = Array.isArray(paths) ? paths : [paths];
-
-    // A build may have started while the dialog was open — don't clobber it.
-    if (useGlossaryRun.getState().busy !== null) return;
-    startOp("import", view.folder);
-    try {
-      const result = await ipc.importReferenceFiles(view.folder, fileList);
-      toast.success(
-        `Imported ${result.count} reference terms from ${result.files_processed} files`,
-      );
-      for (const err of result.errors) {
-        toast.warning(err);
-      }
-      await qc.invalidateQueries({ queryKey: referenceStatusKey(view.folder) });
-    } catch (e: unknown) {
-      toast.error(String(e));
-    } finally {
-      endOp();
-    }
-  };
+  const importFiles = useImportReference(view.folder);
 
   // ── clear reference action ────────────────────────────────────────────────────
 
   const clearRef = async () => {
     await ipc.clearReference(view.folder);
     await qc.invalidateQueries({ queryKey: referenceStatusKey(view.folder) });
+    await qc.invalidateQueries({ queryKey: referenceKey(view.folder) });
   };
 
   // ── render ────────────────────────────────────────────────────────────────────
@@ -123,6 +99,11 @@ export function CreateView({ view }: { view: ProjectView }) {
         {/* Error surfacing — hard requirement: failed/empty build returns here, user MUST see why */}
         {error ? (
           <p className="text-sm text-[color:var(--color-danger)]">{error}</p>
+        ) : null}
+        {summary?.cancelled ? (
+          <p className="text-sm text-[color:var(--color-alert)]">
+            Build cancelled — {summary.terms_final} terms kept.
+          </p>
         ) : null}
         {summary && summary.errors.length > 0 ? (
           <div className="rounded-md border border-[color:var(--color-danger)]/30 bg-[color:var(--color-danger)]/5 px-4 py-3 text-sm">
@@ -234,27 +215,56 @@ export function CreateView({ view }: { view: ProjectView }) {
                 {busy === "import" ? "Importing…" : "Choose files…"}
               </Button>
 
-              {/* Reference status chip */}
-              {refStatus && refStatus.source !== "none" ? (
+              {/* ref/ folder chip — cached imports get the summary block below */}
+              {refStatus?.source === "ref_dir" ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-[color:var(--color-bg-raised)] px-2.5 py-1 text-[11px] text-muted-foreground">
-                  {refStatus.source === "cached" ? (
-                    <>
-                      {refStatus.count} reference terms · imported
-                      <button
-                        type="button"
-                        aria-label="Clear reference terms"
-                        className="ml-0.5 rounded-sm hover:text-foreground transition-colors"
-                        onClick={() => void clearRef()}
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <>ref/ folder detected · {refStatus.count} files</>
-                  )}
+                  ref/ folder detected · {refStatus.count} files
                 </span>
               ) : null}
             </div>
+
+            {/* Cached-import summary: per-category counts + review entry point */}
+            {refStatus?.source === "cached" ? (
+              <div className="mt-3 rounded-md border border-border bg-[color:var(--color-bg-raised)] px-3 py-2 text-[11.5px]">
+                <p className="text-foreground">
+                  <span className="font-semibold">{refStatus.count} reference terms</span> ·
+                  imported
+                </p>
+                {refTerms ? (
+                  <p className="mt-0.5 text-muted-foreground">
+                    {(
+                      [
+                        "characters",
+                        "cultivation",
+                        "skills",
+                        "locations",
+                        "items",
+                        "organizations",
+                      ] as const
+                    )
+                      .filter((c) => refTerms[c].length > 0)
+                      .map((c) => `${refTerms[c].length} ${c}`)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+                <p className="mt-1 flex gap-3">
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => openReview(view.folder)}
+                  >
+                    View / edit
+                  </button>
+                  <button
+                    type="button"
+                    className="text-[color:var(--color-danger)] hover:underline"
+                    onClick={() => void clearRef()}
+                  >
+                    ✕ Clear
+                  </button>
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

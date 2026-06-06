@@ -20,11 +20,15 @@ export interface FileRow {
 }
 
 export interface LogLine {
+  at: string
   file: string | null
   level: LogLevel
   phase: LogPhase
   message: string
 }
+
+/** HH:MM:SS receive-time stamp for log lines (close enough to emit time). */
+const now = () => new Date().toLocaleTimeString("en-GB", { hour12: false })
 
 interface TranslationRunState {
   running: boolean
@@ -85,7 +89,7 @@ export const useTranslationRun = create<TranslationRunState>((set) => ({
           return {
             logs: [
               ...s.logs.slice(-(MAX_LOG_LINES - 1)),
-              { file: e.file, level: e.level, phase: e.phase, message: e.message },
+              { at: now(), file: e.file, level: e.level, phase: e.phase, message: e.message },
             ],
           }
         case "file_done":

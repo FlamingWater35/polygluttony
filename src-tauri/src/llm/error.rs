@@ -40,6 +40,12 @@ impl LlmError {
     pub fn is_auth(&self) -> bool {
         matches!(self, LlmError::Http { status, .. } if matches!(status, 401 | 403 | 404))
     }
+
+    /// True when this error is the service's cancellation signal — a
+    /// consequence of an abort/cancel, not a cause worth recording.
+    pub fn is_cancelled(&self) -> bool {
+        matches!(self, LlmError::Transport(msg) if msg == CANCELLED_MSG)
+    }
 }
 
 #[cfg(test)]

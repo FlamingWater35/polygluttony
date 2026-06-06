@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Folder } from "@phosphor-icons/react";
 import { StateChip } from "@/components/state-chip";
 import { StatusChip } from "@/components/status-chip";
 import { Separator } from "@/components/ui/separator";
 import { ipc } from "@/lib/ipc";
 import { useAppStore } from "@/stores/app-store";
+import { useGlossaryRun } from "@/stores/glossary-store";
 import { useTranslationRun } from "@/stores/translation-store";
 
 export function StatusBar() {
@@ -16,7 +18,33 @@ export function StatusBar() {
   const lineCount = useAppStore((s) => s.dialogueLineCount);
   const connection = useAppStore((s) => s.activeConnection);
   const translating = useTranslationRun((s) => s.running);
+  const navigate = useNavigate();
+  const gBusy = useGlossaryRun((s) => s.busy);
+  const gDone = useGlossaryRun((s) => s.done);
+  const gTotal = useGlossaryRun((s) => s.total);
+  const tFiles = useTranslationRun((s) => s.files);
   const { data: appInfo } = useQuery({ queryKey: ["app-info"], queryFn: ipc.appInfo });
+
+  const translatingCounts = (() => {
+    const all = Object.values(tFiles);
+    const done = all.filter((f) => ["done", "warning", "failed"].includes(f.state)).length;
+    return `${done}/${all.length} files`;
+  })();
+
+  // Engine exclusivity means at most one of these is active at a time.
+  const activity = gBusy
+    ? {
+        to: "/glossary" as const,
+        label:
+          gBusy === "build"
+            ? `Building glossary · ${gDone}/${gTotal}`
+            : gBusy === "import"
+              ? `Importing reference terms · ${gDone}/${gTotal}`
+              : "Normalizing glossary…",
+      }
+    : translating
+      ? { to: "/translate" as const, label: `Translating · ${translatingCounts}` }
+      : null;
 
   return (
     <footer className="col-start-2 flex h-8 items-center gap-3 border-t border-border bg-[color:var(--color-bg-deepest)] px-3 text-[11px] text-muted-foreground">
@@ -29,15 +57,17 @@ export function StatusBar() {
         {workdir ? `${fileCount} files · ${lineCount} lines` : "— files · — lines"}
       </span>
       <span className="flex-1" />
-      {translating ? (
-        <StatusChip variant="alert">Translating…</StatusChip>
+      {activity ? (
+        <button type="button" className="cursor-pointer" onClick={() => void navigate({ to: activity.to })}>
+          <StatusChip variant="alert">⏳ {activity.label}</StatusChip>
+        </button>
       ) : null}
       {worldType ? <StatusChip variant="muted">{worldType}</StatusChip> : null}
       <span className="shrink-0">
         {sourceLang}→{targetLang}
       </span>
       <StatusChip variant="accent">{connection ?? "No connection"}</StatusChip>
-      <StateChip state={translating ? "translating" : "idle"} />
+      <StateChip state={translating ? "translating" : gBusy ? "translating" : "idle"} label={gBusy && !translating ? "Busy" : undefined} />
       <span className="shrink-0 opacity-60">core {appInfo?.version ?? "…"}</span>
     </footer>
   );

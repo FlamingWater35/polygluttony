@@ -3,4 +3,8 @@
 /**
  * Result of an explicit Import (O11 picker path).
  */
-export type ReferenceSummary = { count: number, files_processed: number, errors: Array<string>, };
+export type ReferenceSummary = { count: number, files_processed: number, 
+/**
+ * True when the import was cancelled mid-run (partial terms kept).
+ */
+cancelled: boolean, errors: Array<string>, };

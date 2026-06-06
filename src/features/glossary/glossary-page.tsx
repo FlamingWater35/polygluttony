@@ -3,11 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ipc } from "@/lib/ipc";
 import { useAppStore } from "@/stores/app-store";
 import { useGlossaryRun } from "@/stores/glossary-store";
-import { useProject } from "@/features/project/use-project";
+import { useProject, projectKey } from "@/features/project/use-project";
+import type { ProjectView } from "@/types/generated/ProjectView";
 import { EmptyState } from "@/components/empty-state";
 import { CreateView } from "./create-view";
 import { BuildProgress } from "./build-progress";
+import { ImportProgress } from "./import-progress";
 import { EditorView } from "./editor-view";
+import { ReferenceReview } from "./reference-review";
 
 export function glossaryKey(folder: string) {
   return ["glossary", folder] as const;
@@ -28,6 +31,7 @@ export function GlossaryPage() {
   const qc = useQueryClient();
   const busy = useGlossaryRun((s) => s.busy);
   const fileTick = useGlossaryRun((s) => s.fileTick);
+  const reviewOpen = useGlossaryRun((s) => s.reviewOpen);
   const { data: view } = useProject(workdir ?? "");
   const { data: doc, isPending } = useQuery({
     queryKey: glossaryKey(workdir ?? ""),
@@ -62,6 +66,19 @@ export function GlossaryPage() {
     void qc.invalidateQueries({ queryKey: glossaryKey(workdir) });
   }, [fileTick, workdir, qc]);
 
+  // Whenever the glossary doc (re)loads — build Done, external edit, mount —
+  // sync the term count into the rail badge and the cached ProjectView, which
+  // is staleTime-Infinity and would otherwise feed stale counts back to the
+  // shell on the next prefs save.
+  useEffect(() => {
+    if (!workdir || doc === undefined) return;
+    const n = doc?.count ?? null;
+    useAppStore.getState().setGlossaryTerms(n);
+    qc.setQueryData<ProjectView>(projectKey(workdir), (v) =>
+      v ? { ...v, glossary_terms: n } : v,
+    );
+  }, [doc, workdir, qc]);
+
   if (!workdir) return <EmptyState title="Glossary" description="Open a folder first." />;
   if (view && !view.supports_glossary) {
     return (
@@ -72,7 +89,9 @@ export function GlossaryPage() {
     );
   }
   if (busy === "build") return <BuildProgress />;
+  if (busy === "import") return <ImportProgress />;
   if (!view || isPending) return null;
+  if (reviewOpen) return <ReferenceReview view={view} />;
   if (!doc || doc.count === 0) return <CreateView view={view} />;
   return <EditorView view={view} doc={doc} />;
 }

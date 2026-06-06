@@ -13,7 +13,7 @@
 
 use std::path::{Path, PathBuf};
 
-use futures::future::join_all;
+use futures::stream::{FuturesOrdered, StreamExt};
 use tokio::sync::mpsc;
 
 use serde::{Deserialize, Serialize};
@@ -38,7 +38,8 @@ const CATEGORY_LABELS: [(&str, &str); 6] = [
 ];
 
 /// Six list-categories of English terms (no source mapping — guidance only).
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/generated/")]
 pub struct ReferenceTerminology {
     #[serde(default)]
     pub characters: Vec<String>,
@@ -228,6 +229,8 @@ pub fn reference_status(folder: &Path) -> ReferenceStatus {
 pub struct ReferenceSummary {
     pub count: u32,
     pub files_processed: u32,
+    /// True when the import was cancelled mid-run (partial terms kept).
+    pub cancelled: bool,
     pub errors: Vec<String>,
 }
 
@@ -252,6 +255,7 @@ fn collect_dialogue_lines(files: &[PathBuf]) -> (Vec<String>, u32) {
 /// lines, parallel via `LlmService` (its retries/AIMD replace Python's
 /// BatchManager), merge sorted by batch index, dedupe. Both LLM failures and
 /// unparseable responses are recorded in `errors` and skipped — NEVER fatal.
+/// Cancellation-caused failures are silently dropped (not recorded in `errors`).
 /// Returns (terms, files_processed, errors).
 pub async fn extract_from_files(
     svc: &LlmService,
@@ -271,44 +275,50 @@ pub async fn extract_from_files(
     let total = batches.len() as u32;
     let _ = tx.send(GlossaryEvent::Progress { done: 0, total }).await;
 
-    // Drive all batch futures concurrently; join_all preserves input order so
-    // merge order = batch index order (reference_extractor.py:86). Borrowing
-    // `svc` directly — no Arc clone per task; drop-cancellation is free.
-    let futures: Vec<_> = batches
+    // FuturesOrdered (not join_all): results still consumed in batch-index
+    // order (deterministic merge, reference_extractor.py:86), but each future
+    // emits Progress ON COMPLETION via the shared counter — the bar moves as
+    // work finishes instead of bursting at the end.
+    let completed = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+    let mut futs: FuturesOrdered<_> = batches
         .into_iter()
         .map(|batch| {
             let req = LlmRequest {
                 system: crate::glossary::prompts::REFERENCE_EXTRACT.to_string(),
                 user: crate::glossary::prompts::extraction_user_prompt(&batch),
             };
-            svc.request(req)
+            let tx = tx.clone();
+            let completed = completed.clone();
+            async move {
+                let result = svc.request(req).await;
+                let done = completed.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                let _ = tx.send(GlossaryEvent::Progress { done, total }).await;
+                result
+            }
         })
         .collect();
-    let results = join_all(futures).await;
 
     let mut merged = ReferenceTerminology::default();
     let mut errors = Vec::new();
-    for (i, result) in results.into_iter().enumerate() {
-        let done = (i + 1) as u32;
+    let mut i = 0u32;
+    while let Some(result) = futs.next().await {
+        i += 1;
         match result {
             Ok(resp) => match parse_response::extract_object(&resp.text) {
                 Ok(v) => merged.merge(&ReferenceTerminology::from_value(&v)),
                 Err(e) => {
-                    let msg = format!(
-                        "reference batch {done}/{total}: unparseable response ({e})"
-                    );
+                    let msg = format!("reference batch {i}/{total}: unparseable response ({e})");
                     let _ = tx
-                        .send(GlossaryEvent::Log {
-                            level: LogLevel::Warning,
-                            message: msg.clone(),
-                        })
+                        .send(GlossaryEvent::Log { level: LogLevel::Warning, message: msg.clone() })
                         .await;
                     errors.push(msg);
                 }
             },
-            Err(e) => errors.push(format!("reference batch {done}/{total} failed: {e}")),
+            // The service only produces its cancellation transport error when
+            // the token is tripped — consequences of a stop, never recorded.
+            Err(e) if e.is_cancelled() => {}
+            Err(e) => errors.push(format!("reference batch {i}/{total} failed: {e}")),
         }
-        let _ = tx.send(GlossaryEvent::Progress { done, total }).await;
     }
     merged.deduplicate();
     (merged, files_ok, errors)
@@ -557,8 +567,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         // batch limit 2 → ×0.7 → 1 line per batch → 2 batches for 2 lines.
         // HTTP 400 is non-retryable and non-auth: exactly one driver call per
-        // batch. Script order = join_all completion order (deterministic: no
-        // spawned tasks, no interleaving).
+        // batch. cap-1 service serializes driver calls in batch order, so
+        // FuturesOrdered delivers results in script order (deterministic).
         let f = write_ass(dir.path(), "e1.ass", &["line one", "line two"]);
         let d = ScriptedDriver::new(vec![
             Err(crate::llm::error::LlmError::Http { status: 400, body: "bad request".into() }),
@@ -574,6 +584,49 @@ mod tests {
             errors[0]
         );
         assert_eq!(t.locations, vec!["Qingyang Town"]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancelled_extraction_records_no_cancel_noise() {
+        let dir = tempfile::tempdir().unwrap();
+        let f = write_ass(dir.path(), "e1.ass", &["line one", "line two"]);
+        let cancel = CancellationToken::new();
+        cancel.cancel(); // user cancelled before any batch ran
+        let d = ScriptedDriver::new(vec![]); // service errors before the driver
+        let svc = {
+            let (tx, _rx) = tokio::sync::mpsc::channel(64);
+            LlmService::new(d, 1, cancel, tx)
+        };
+        let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
+        let (t, _files_ok, errors) = extract_from_files(&svc, &[f], Some(2), &gtx).await;
+        assert!(t.is_empty());
+        assert!(errors.is_empty(), "cancel noise must be suppressed: {errors:?}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn extraction_progress_covers_all_batches_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let f = write_ass(dir.path(), "e1.ass", &["line one", "line two"]);
+        let d = ScriptedDriver::new(vec![
+            Ok(r#"{"characters":["A"]}"#.into()),
+            Ok(r#"{"characters":["B"]}"#.into()),
+        ]);
+        let (gtx, mut grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
+        let svc = {
+            let (tx, _rx) = tokio::sync::mpsc::channel(64);
+            LlmService::new(d, 1, CancellationToken::new(), tx)
+        };
+        let _ = extract_from_files(&svc, &[f], Some(2), &gtx).await;
+        drop(gtx);
+        let mut dones = Vec::new();
+        while let Ok(ev) = grx.try_recv() {
+            if let GlossaryEvent::Progress { done, total } = ev {
+                assert_eq!(total, 2);
+                dones.push(done);
+            }
+        }
+        dones.sort_unstable();
+        assert_eq!(dones, vec![0, 1, 2]); // initial 0 + one per completion
     }
 
     #[tokio::test(start_paused = true)]

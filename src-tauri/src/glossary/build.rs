@@ -27,7 +27,6 @@ use crate::glossary::diff::GlossaryDiff;
 use crate::glossary::io::{load_folder_glossary, save_folder_glossary};
 use crate::glossary::model::Glossary;
 use crate::glossary::{normalize, personalize, prompts, reference};
-use crate::llm::error::{LlmError, CANCELLED_MSG};
 use crate::llm::service::LlmService;
 use crate::llm::LlmRequest;
 use crate::models::language_pair::LanguagePair;
@@ -71,12 +70,6 @@ pub(crate) fn merged_with_existing(existing: Option<&Glossary>, new_terms: &Glos
         }
         None => new_terms.clone(),
     }
-}
-
-/// After abort/cancel, batches still queued in the service fail with this
-/// transport error — consequences of the stop, not causes worth recording.
-fn is_cancel_noise(e: &LlmError) -> bool {
-    matches!(e, LlmError::Transport(msg) if msg == CANCELLED_MSG)
 }
 
 async fn phase(tx: &mpsc::Sender<GlossaryEvent>, p: GlossaryPhase, detail: Option<String>) {
@@ -162,14 +155,17 @@ pub async fn build_glossary(
         job.template_variant.as_deref(),
     );
 
-    // FuturesOrdered, not tokio::spawn and not join_all: structured concurrency
-    // (drop-cancellation, no 'static bound, no panic arm) with results yielded
-    // IN BATCH ORDER as they complete — so the incremental merge+save keeps
-    // flowing DURING the run instead of all landing at the end (crash safety).
-    // Trade-off: strictly-in-order yielding means a slow batch 1 head-of-line-
-    // blocks progress/saves of later batches that already completed —
-    // deterministic merges were chosen over completion-order progress.
+    // Progress is emitted by each future ON COMPLETION (shared atomic counter)
+    // so the bar moves the moment ANY batch finishes — results are still
+    // CONSUMED in batch order below for deterministic first-wins merging.
+    // Near-simultaneous completions can deliver counts out of order (the
+    // frontend store clamps these — see the UX-overhaul store changes).
+    // FuturesOrdered: structured concurrency (drop-cancellation, no 'static
+    // bound, no panic arm); strictly-in-order consumption means a slow batch 1
+    // head-of-line-blocks incremental SAVES of later batches — deterministic
+    // merges were chosen over completion-order saves.
     // The LlmService bounds the actual parallelism via its permits.
+    let completed = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
     let mut futs: FuturesOrdered<_> = batches
         .iter()
         .map(|batch| {
@@ -177,7 +173,14 @@ pub async fn build_glossary(
                 system: system.clone(),
                 user: prompts::extraction_user_prompt(batch),
             };
-            svc.request(req)
+            let tx = tx.clone();
+            let completed = completed.clone();
+            async move {
+                let result = svc.request(req).await;
+                let done = completed.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                let _ = tx.send(GlossaryEvent::Progress { done, total }).await;
+                result
+            }
         })
         .collect();
 
@@ -187,11 +190,11 @@ pub async fn build_glossary(
     let mut terms_extracted = 0u32;
     let mut batches_processed = 0u32;
     let mut aborted = false;
-    let mut done = 0u32;
+    let mut consumed = 0u32;
 
     while let Some(result) = futs.next().await {
-        done += 1;
-        let n = done;
+        consumed += 1;
+        let n = consumed;
         match result {
             Ok(resp) => {
                 // Unparseable 2xx = empty glossary but still "processed"
@@ -248,14 +251,13 @@ pub async fn build_glossary(
                 ));
             }
             Err(e) => {
-                let noise = (aborted || job.cancel.is_cancelled()) && is_cancel_noise(&e);
+                let noise = (aborted || job.cancel.is_cancelled()) && e.is_cancelled();
                 if !noise {
                     log(&tx, LogLevel::Warning, format!("batch {n}/{total} failed: {e}")).await;
                     errors.push(format!("batch {n}/{total} failed: {e}"));
                 }
             }
         }
-        let _ = tx.send(GlossaryEvent::Progress { done: n, total }).await;
     }
 
     new_terms.deduplicate();
@@ -630,6 +632,39 @@ mod tests {
         assert_eq!(s.files_processed, 0);
         assert_eq!(s.errors, vec!["No text found in files".to_string()]);
         assert!(load_folder_glossary(dir.path()).is_none());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn progress_is_emitted_per_completion_with_full_coverage() {
+        let dir = tempfile::tempdir().unwrap();
+        write_ass(dir.path(), "e1.ass", &["一", "二", "三"]); // 3 batches at limit 2
+        let cancel = CancellationToken::new();
+        let d = ScriptedDriver::new(vec![
+            Ok(r#"{"characters":{"a":"A"}}"#.into()),
+            Ok(r#"{"characters":{"b":"B"}}"#.into()),
+            Ok(r#"{"characters":{"c":"C"}}"#.into()),
+        ]);
+        let svc = svc1(d, cancel.clone());
+        let (events, s) =
+            run_and_collect(job(dir.path(), vec!["e1.ass".into()], cancel), &svc, None).await;
+        assert_eq!(s.batches_processed, 3);
+        // Progress comes from completions: initial 0, then 1..=3 EXACTLY once
+        // each (any arrival order — the frontend store clamps these; see the
+        // UX-overhaul store changes).
+        // Strict multiset equality also proves there is a single emission
+        // source — a second one would duplicate counts and fail this.
+        let mut dones: Vec<u32> = events
+            .iter()
+            .filter_map(|e| match e {
+                GlossaryEvent::Progress { done, total } => {
+                    assert_eq!(*total, 3);
+                    Some(*done)
+                }
+                _ => None,
+            })
+            .collect();
+        dones.sort_unstable();
+        assert_eq!(dones, vec![0, 1, 2, 3]);
     }
 
     #[tokio::test(start_paused = true)]

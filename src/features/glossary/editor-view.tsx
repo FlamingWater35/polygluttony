@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import {
   ArrowsDownUp,
+  Books,
   DownloadSimple,
   MagnifyingGlass,
   NotePencil,
@@ -18,11 +19,13 @@ import type { GlossaryDoc } from "@/types/generated/GlossaryDoc";
 import type { GlossaryDiff } from "@/types/generated/GlossaryDiff";
 import type { GlossaryBuildSummary } from "@/types/generated/GlossaryBuildSummary";
 import type { NormalizeReview } from "@/types/generated/NormalizeReview";
+import type { Language } from "@/types/generated/Language";
 import { ipc } from "@/lib/ipc";
 import { useAppStore } from "@/stores/app-store";
 import { useGlossaryRun } from "@/stores/glossary-store";
 import { projectKey } from "@/features/project/use-project";
 import { glossaryKey, markLocalSave } from "./glossary-page";
+import { referenceKey } from "./use-import-reference";
 import { DiffReview } from "./diff-review";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -62,6 +65,27 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
   const busy = useGlossaryRun((s) => s.busy);
   const lastDiff = useGlossaryRun((s) => s.lastDiff);
   const summary = useGlossaryRun((s) => s.summary);
+  const openReview = useGlossaryRun((s) => s.openReview);
+
+  const { data: languages } = useQuery({
+    queryKey: ["languages"],
+    queryFn: ipc.listLanguages,
+    staleTime: Infinity,
+  });
+  const langName = (code: string) =>
+    languages?.find((l: Language) => l.code === code)?.name ?? code;
+  const sourceName = langName(view.prefs.source_lang);
+  const targetName = langName(view.prefs.target_lang);
+
+  // Reference-term count for the toolbar button (also the import entry point
+  // once a glossary exists — the review screen's empty state offers Import).
+  const { data: refTerms } = useQuery({
+    queryKey: referenceKey(view.folder),
+    queryFn: () => ipc.loadReference(view.folder),
+  });
+  const refCount = refTerms
+    ? CATEGORIES.reduce((n, c) => n + refTerms[c].length, 0)
+    : 0;
 
   const [search, setSearch] = useState("");
   const [addCat, setAddCat] = useState<Category>("characters");
@@ -211,6 +235,10 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
                 <ArrowsDownUp className="size-4" /> View changes
               </Button>
             ) : null}
+            <Button size="sm" variant="secondary" onClick={() => openReview(view.folder)} disabled={busy !== null}>
+              <Books className="size-4" />
+              Reference terms{refCount ? ` (${refCount})` : ""}
+            </Button>
             <Button size="sm" variant="secondary" onClick={openInEditor}>
               <NotePencil className="size-4" /> Open in editor
             </Button>
@@ -269,56 +297,67 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
           </Button>
         </div>
 
-        {/* Category sections */}
+        {/* Terms table */}
         {sections.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No terms match “{search}”.</p>
+          <p className="text-sm text-muted-foreground">No terms match &#x201C;{search}&#x201D;.</p>
         ) : (
-          sections.map(({ cat, rows }) => (
-            <div key={cat} className="mb-4">
-              <div className="mb-1 flex items-baseline gap-2">
-                <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {LABELS[cat]}
-                </h2>
-                <span className="text-[11px] text-muted-foreground tabular-nums">
-                  {rows.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6">
-                {rows.map(([source, translation]) => (
-                  <div
-                    key={source}
-                    className="group flex items-center gap-2 rounded-md px-2 py-1 hover:bg-[color:var(--card)]"
-                    onDoubleClick={() => { if (!busy) setEditing({ cat, source }); }}
-                  >
-                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-foreground">
-                      {source}
-                    </span>
-                    <span className="text-[12.5px] text-muted-foreground">→</span>
-                    {editing?.cat === cat && editing.source === source ? (
-                      <InlineEdit
-                        initial={translation}
-                        onCommit={(v) => commitEdit(cat, source, v)}
-                        onCancel={() => setEditing(null)}
-                      />
-                    ) : (
-                      <span className="min-w-0 flex-1 truncate text-[12.5px] text-foreground">
-                        {translation}
+          <table className="w-full table-fixed border-collapse text-[12.5px]">
+            <thead>
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                <th className="w-[45%] px-2 py-1.5 font-semibold">{sourceName}</th>
+                <th className="px-2 py-1.5 font-semibold">{targetName}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map(({ cat, rows }) => (
+                <Fragment key={cat}>
+                  <tr>
+                    <td colSpan={2} className="px-2 pt-3 pb-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {LABELS[cat]}
                       </span>
-                    )}
-                    <button
-                      type="button"
-                      aria-label={`Delete ${source}`}
-                      disabled={busy !== null}
-                      className="invisible shrink-0 text-muted-foreground transition-colors group-hover:visible hover:text-[color:var(--color-danger)] disabled:pointer-events-none disabled:opacity-40"
-                      onClick={() => persist(withoutTerm(cat, source))}
+                      <span className="ml-2 text-[11px] text-muted-foreground tabular-nums">
+                        {rows.length}
+                      </span>
+                    </td>
+                  </tr>
+                  {rows.map(([source, translation]) => (
+                    <tr
+                      key={source}
+                      className="group border-b border-border/50 hover:bg-[color:var(--card)]"
+                      onDoubleClick={() => { if (!busy) setEditing({ cat, source }); }}
                     >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))
+                      <td className="truncate px-2 py-1 text-foreground">{source}</td>
+                      <td className="px-2 py-1">
+                        <div className="flex items-center gap-2">
+                          {editing?.cat === cat && editing.source === source ? (
+                            <InlineEdit
+                              initial={translation}
+                              onCommit={(v) => commitEdit(cat, source, v)}
+                              onCancel={() => setEditing(null)}
+                            />
+                          ) : (
+                            <span className="min-w-0 flex-1 truncate text-foreground">
+                              {translation}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            aria-label={`Delete ${source}`}
+                            disabled={busy !== null}
+                            className="invisible shrink-0 text-muted-foreground transition-colors group-hover:visible hover:text-[color:var(--color-danger)] disabled:pointer-events-none disabled:opacity-40"
+                            onClick={() => persist(withoutTerm(cat, source))}
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
