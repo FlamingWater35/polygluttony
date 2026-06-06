@@ -90,6 +90,13 @@ pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
     }
 
     let pair = LanguagePair::from_codes(&args.source_lang, &args.target_lang)?;
+    // Resolve prompt templates ONCE — a running job is immune to mid-job edits;
+    // changes apply to the next run. An unreadable override fails loudly here.
+    let prompts = std::sync::Arc::new(crate::prompts::TranslationPrompts::resolve(
+        &crate::prompts::overrides_dir(&app)?,
+        &pair,
+        args.tone,
+    )?);
     let folder = PathBuf::from(&args.folder);
     let glossary: Arc<Glossary> = Arc::new(load_folder_glossary(&folder).unwrap_or_default());
 
@@ -123,7 +130,6 @@ pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
     // Worker spawner.
     let sem = Arc::new(Semaphore::new(concurrency as usize));
     let batch_limit = conn.batch_dialogue_limit;
-    let tone = args.tone;
     tauri::async_runtime::spawn(async move {
         // Zip file names with task handles so a panicking task can emit a named error.
         let mut handles: Vec<(String, tauri::async_runtime::JoinHandle<FileResult>)> = Vec::new();
@@ -145,6 +151,7 @@ pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
             let job_svc = svc.clone();
             let job_glossary = glossary.clone();
             let job_pair = pair.clone();
+            let job_prompts = prompts.clone();
             let input = folder.join(&name);
             let task_name = name.clone();
             let handle = tauri::async_runtime::spawn(async move {
@@ -155,7 +162,7 @@ pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
                     svc: &job_svc,
                     glossary: &job_glossary,
                     pair: job_pair,
-                    tone,
+                    prompts: &job_prompts,
                     batch_limit,
                     cancel: job_cancel,
                     tx: job_tx,

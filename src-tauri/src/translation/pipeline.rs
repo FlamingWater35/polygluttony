@@ -38,7 +38,6 @@ use crate::ass::decode::decode_file;
 use crate::ass::parse::{parse_dialogues, DialogueLine};
 use crate::ass::tags::strip_for_text;
 use crate::ass::writer::write_translated;
-use crate::config::projects::Tone;
 use crate::events::{FileResult, FileStateKind, LogLevel, LogPhase, RunEvent, VerifyIssue};
 use crate::glossary::model::Glossary;
 use crate::llm::service::LlmService;
@@ -66,7 +65,7 @@ pub struct FileJob<'a> {
     pub svc: &'a LlmService,
     pub glossary: &'a Glossary,
     pub pair: LanguagePair,
-    pub tone: Tone,
+    pub prompts: &'a crate::prompts::TranslationPrompts,
     pub batch_limit: Option<u32>,
     pub cancel: CancellationToken,
     pub tx: mpsc::Sender<RunEvent>,
@@ -108,7 +107,8 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
     let lines = parse_dialogues(&original);
     let settings = BatchSettings {
         pair: job.pair.clone(),
-        tone: job.tone,
+        template: job.prompts.template.clone(),
+        tone_text: job.prompts.tone.clone(),
     };
     let mut st = FileState {
         job: &job,
@@ -140,7 +140,10 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
         }
         st.state(FileStateKind::Verifying, None).await;
         let stripped = st.stripped_pairs();
-        let report = match verify_file(job.svc, &stripped, &job.glossary.all_terms()).await {
+        let report =
+            match verify_file(job.svc, &stripped, &job.glossary.all_terms(), &job.prompts.verify)
+                .await
+            {
             Ok(r) => r,
             Err(e) => {
                 // Dead key mid-verify: fail the file and doom the run, mirroring
@@ -587,7 +590,6 @@ impl FileState<'_, '_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::projects::Tone;
     use crate::events::{FileStateKind, RunEvent};
     use crate::glossary::model::Glossary;
     use crate::llm::service::LlmService;
@@ -629,6 +631,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("ep01.ass");
         std::fs::write(&input, source).unwrap();
+        let prompts = crate::prompts::TranslationPrompts::defaults(
+            &LanguagePair::from_codes("zh", "en").unwrap(),
+            crate::config::projects::Tone::Standard,
+        );
 
         let result = translate_file(FileJob {
             input: input.clone(),
@@ -636,7 +642,7 @@ mod tests {
             svc: &svc,
             glossary: &Glossary::default(),
             pair: LanguagePair::from_codes("zh", "en").unwrap(),
-            tone: Tone::Standard,
+            prompts: &prompts,
             batch_limit: Some(100),
             cancel: CancellationToken::new(),
             tx: tx.clone(),
@@ -924,13 +930,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("ep01.ass");
         std::fs::write(&input, &src).unwrap();
+        let prompts = crate::prompts::TranslationPrompts::defaults(
+            &LanguagePair::from_codes("zh", "en").unwrap(),
+            crate::config::projects::Tone::Standard,
+        );
         let result = translate_file(FileJob {
             input,
             file_name: "ep01.ass".into(),
             svc: &svc,
             glossary: &Glossary::default(),
             pair: LanguagePair::from_codes("zh", "en").unwrap(),
-            tone: Tone::Standard,
+            prompts: &prompts,
             batch_limit: Some(100),
             cancel,
             tx,

@@ -32,7 +32,7 @@ use crate::events::VerifyIssue;
 use crate::llm::error::LlmError;
 use crate::llm::service::LlmService;
 use crate::llm::LlmRequest;
-use crate::translation::{parse_response, prompts};
+use crate::translation::parse_response;
 use crate::validation::{drift, LinePair};
 
 const SAMPLE_RATE: f64 = 0.5;
@@ -54,6 +54,7 @@ pub async fn verify_file(
     svc: &LlmService,
     lines: &BTreeMap<u32, (String, String)>,
     glossary_terms: &BTreeMap<String, String>,
+    verify_template: &str,
 ) -> Result<VerifyReport, LlmError> {
     let pairs: Vec<LinePair> = lines
         .iter()
@@ -91,7 +92,7 @@ pub async fn verify_file(
             .map(|(id, s, t)| serde_json::json!({ "id": id, "src": s, "tgt": t }))
             .collect();
         let req = LlmRequest {
-            system: prompts::VERIFY.to_string(),
+            system: verify_template.to_string(),
             user: serde_json::to_string(&payload).expect("serializable"),
         };
         let resp = match svc.request(req).await {
@@ -280,7 +281,7 @@ mod tests {
         let driver = ScriptedDriver::new(vec![]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver.clone(), 2, CancellationToken::new(), tx);
-        let r = verify_file(&svc, &p, &BTreeMap::new()).await.unwrap();
+        let r = verify_file(&svc, &p, &BTreeMap::new(), crate::prompts::default_text(crate::prompts::PromptId::Verify)).await.unwrap();
         assert!(!r.issues.is_empty());
         assert_eq!(r.issues[0].issue_type, "drift");
         assert_eq!(driver.call_count(), 0); // stage 2 skipped
@@ -292,7 +293,7 @@ mod tests {
             ScriptedDriver::new(vec![Ok(r#"{"issues":[{"id":3,"reason":"unrelated"}]}"#.into())]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
-        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap();
+        let r = verify_file(&svc, &pairs(12), &BTreeMap::new(), crate::prompts::default_text(crate::prompts::PromptId::Verify)).await.unwrap();
         assert_eq!(r.failed_line_ids, [3].into());
         assert_eq!(r.issues.len(), 1);
         assert_eq!(r.issues[0].line_id, 3);
@@ -304,7 +305,7 @@ mod tests {
             ScriptedDriver::new(vec![Ok(r#"[{"id":3,"reason":"unrelated"}]"#.into())]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
-        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap();
+        let r = verify_file(&svc, &pairs(12), &BTreeMap::new(), crate::prompts::default_text(crate::prompts::PromptId::Verify)).await.unwrap();
         assert_eq!(r.failed_line_ids, [3].into());
     }
 
@@ -317,7 +318,7 @@ mod tests {
         ]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
-        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap();
+        let r = verify_file(&svc, &pairs(12), &BTreeMap::new(), crate::prompts::default_text(crate::prompts::PromptId::Verify)).await.unwrap();
         assert!(r.issues.is_empty()); // verifier degrades gracefully
     }
 
@@ -330,7 +331,7 @@ mod tests {
         })]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
-        let err = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap_err();
+        let err = verify_file(&svc, &pairs(12), &BTreeMap::new(), crate::prompts::default_text(crate::prompts::PromptId::Verify)).await.unwrap_err();
         assert!(err.is_auth());
     }
 
@@ -344,7 +345,7 @@ mod tests {
         let cancel = CancellationToken::new();
         let svc = LlmService::new(driver, 2, cancel.clone(), tx);
         cancel.cancel();
-        let err = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap_err();
+        let err = verify_file(&svc, &pairs(12), &BTreeMap::new(), crate::prompts::default_text(crate::prompts::PromptId::Verify)).await.unwrap_err();
         assert!(err.is_cancelled());
     }
 }

@@ -86,7 +86,6 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
-    use crate::config::projects::Tone;
     use crate::llm::test_support::ScriptedDriver;
     use crate::models::language_pair::LanguagePair;
     use tokio_util::sync::CancellationToken;
@@ -102,7 +101,8 @@ mod tests {
     fn settings() -> BatchSettings {
         BatchSettings {
             pair: LanguagePair::from_codes("zh", "en").unwrap(),
-            tone: Tone::Standard,
+            template: crate::prompts::default_text(crate::prompts::PromptId::TranslateZhEn).into(),
+            tone_text: crate::prompts::default_text(crate::prompts::PromptId::ToneStandard).into(),
         }
     }
 

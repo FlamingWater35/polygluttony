@@ -4,7 +4,6 @@
 
 use std::collections::BTreeMap;
 
-use crate::config::projects::Tone;
 use crate::glossary::model::Glossary;
 use crate::llm::service::LlmService;
 use crate::llm::LlmRequest;
@@ -23,7 +22,10 @@ pub struct BatchLine {
 #[derive(Debug, Clone)]
 pub struct BatchSettings {
     pub pair: LanguagePair,
-    pub tone: Tone,
+    /// Resolved translate.* template for the run's language pair.
+    pub template: String,
+    /// Resolved tone guideline text.
+    pub tone_text: String,
 }
 
 #[derive(Debug)]
@@ -62,7 +64,8 @@ pub async fn translate_batch(
         .map(|l| (l.id, markers::inject(l.id, l.kind, &filtered.inject_hints(&l.stripped_src))))
         .collect();
 
-    let system = prompts::system_prompt(&settings.pair, &filtered, settings.tone);
+    let system =
+        prompts::system_prompt(&settings.template, &settings.pair, &filtered, &settings.tone_text);
     let user = prompts::user_prompt(&marked, context);
 
     let resp = match svc.request(LlmRequest { system, user }).await {
@@ -162,7 +165,6 @@ pub async fn translate_batch_tagged(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::projects::Tone;
     use crate::glossary::model::Glossary;
     use crate::llm::service::LlmService;
     use crate::llm::test_support::ScriptedDriver;
@@ -189,7 +191,8 @@ mod tests {
     fn settings() -> BatchSettings {
         BatchSettings {
             pair: LanguagePair::from_codes("zh", "en").unwrap(),
-            tone: Tone::Standard,
+            template: crate::prompts::default_text(crate::prompts::PromptId::TranslateZhEn).into(),
+            tone_text: crate::prompts::default_text(crate::prompts::PromptId::ToneStandard).into(),
         }
     }
 

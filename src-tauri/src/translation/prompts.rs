@@ -1,60 +1,37 @@
-//! Prompt assembly from embedded templates. Port of
-//! `core/batch_translator.py:415-484`. Templates live in `src-tauri/prompts/`.
+//! Prompt assembly from catalog-resolved templates. Port of
+//! `core/batch_translator.py:415-484`. Templates live in `src-tauri/prompts/`
+//! and are resolved (override-aware) by `crate::prompts` at run start.
 //!
 //! # Placeholder mapping per template
 //!
 //! - `translate.zh-en.txt`:        `{GLOSSARY}`, `{TONE}`
 //! - `translate.generic.txt`:      `{source_language}`, `{target_language}`, `{localization_style}`
 
-use crate::config::projects::Tone;
 use crate::glossary::model::Glossary;
 use crate::models::language_pair::LanguagePair;
 
-const TRANSLATE_GENERIC: &str = include_str!("../../prompts/translate.generic.txt");
-const TRANSLATE_ZH_EN: &str = include_str!("../../prompts/translate.zh-en.txt");
-pub const VERIFY: &str = include_str!("../../prompts/verify.txt");
-
-const TONE_STANDARD: &str = include_str!("../../prompts/tones/standard.txt");
-const TONE_XIANXIA: &str = include_str!("../../prompts/tones/xianxia.txt");
-const TONE_WUXIA: &str = include_str!("../../prompts/tones/wuxia.txt");
-const TONE_COMEDIC: &str = include_str!("../../prompts/tones/comedic.txt");
-const TONE_FUNNY: &str = include_str!("../../prompts/tones/funny.txt");
-
-fn tone_text(tone: Tone) -> &'static str {
-    match tone {
-        Tone::Standard => TONE_STANDARD,
-        Tone::Xianxia => TONE_XIANXIA,
-        Tone::Wuxia => TONE_WUXIA,
-        Tone::Comedic => TONE_COMEDIC,
-        Tone::Funny => TONE_FUNNY,
-    }
-}
-
-/// Template selection: `translate.{src}-{tgt}.txt` → `translate.generic.txt`.
-fn template(pair: &LanguagePair) -> &'static str {
-    match (pair.source.as_str(), pair.target.as_str()) {
-        ("zh", "en") => TRANSLATE_ZH_EN,
-        _ => TRANSLATE_GENERIC,
-    }
-}
-
-/// Fill all known placeholders for the selected template. Each template uses
-/// its own placeholder names (see module doc); we apply all substitutions and
-/// any that don't appear in the chosen template are simply no-ops. The templates
-/// define both UPPERCASE and lowercase variants; we fill both to prevent latent
-/// placeholder leaks (`core/batch_translator.py:433-445` only fills UPPERCASE).
-pub fn system_prompt(pair: &LanguagePair, glossary: &Glossary, tone: Tone) -> String {
-    let tone_str = tone_text(tone);
+/// Fill all known placeholders in `template`. Each template uses its own
+/// placeholder names (see module doc); we apply all substitutions and any that
+/// don't appear are no-ops. Both UPPERCASE and lowercase forms are filled —
+/// validation is case-tolerant, so the engine must be too.
+pub fn system_prompt(
+    template: &str,
+    pair: &LanguagePair,
+    glossary: &Glossary,
+    tone_text: &str,
+) -> String {
     let glossary_str = glossary.to_formatted_string();
-
-    template(pair)
-        // translate.zh-en.txt placeholders
+    template
         .replace("{GLOSSARY}", &glossary_str)
-        .replace("{TONE}", tone_str)
-        // translate.generic.txt placeholders (lowercase)
+        .replace("{glossary}", &glossary_str)
+        .replace("{TONE}", tone_text)
+        .replace("{tone}", tone_text)
         .replace("{source_language}", &pair.source_name)
+        .replace("{SOURCE_LANGUAGE}", &pair.source_name)
         .replace("{target_language}", &pair.target_name)
-        .replace("{localization_style}", tone_str)
+        .replace("{TARGET_LANGUAGE}", &pair.target_name)
+        .replace("{localization_style}", tone_text)
+        .replace("{LOCALIZATION_STYLE}", tone_text)
 }
 
 /// Build the user prompt. `lines` are (id, marked+hinted src). `context` is
@@ -81,21 +58,25 @@ pub fn user_prompt(lines: &[(u32, String)], context: &[(String, String)]) -> Str
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::projects::Tone;
     use crate::glossary::model::Glossary;
     use crate::models::language_pair::LanguagePair;
+    use crate::prompts::{default_text, PromptId};
 
     fn pair() -> LanguagePair {
         LanguagePair::from_codes("zh", "en").unwrap()
     }
 
-    /// translate.zh-en.txt contains {GLOSSARY} and {TONE} only —
-    /// not {SOURCE_LANGUAGE} or {TARGET_LANGUAGE}.
+    /// translate.zh-en.txt contains {GLOSSARY} and {TONE} only.
     #[test]
     fn system_prompt_fills_placeholders() {
         let mut g = Glossary::new("xianxia");
         g.characters.insert("星汉".into(), "Xinghan".into());
-        let p = system_prompt(&pair(), &g, Tone::Xianxia);
+        let p = system_prompt(
+            default_text(PromptId::TranslateZhEn),
+            &pair(),
+            &g,
+            default_text(PromptId::ToneXianxia),
+        );
         assert!(!p.contains("{GLOSSARY}"));
         assert!(!p.contains("{TONE}"));
         assert!(p.contains("星汉 → Xinghan"));
@@ -103,11 +84,25 @@ mod tests {
 
     /// translate.generic.txt uses {source_language} / {target_language} (lowercase).
     #[test]
-    fn unknown_pair_falls_back_to_generic() {
+    fn generic_template_fills_language_names() {
         let pair = LanguagePair::from_codes("ko", "en").unwrap();
-        let p = system_prompt(&pair, &Glossary::default(), Tone::Standard);
+        let p = system_prompt(
+            default_text(PromptId::TranslateGeneric),
+            &pair,
+            &Glossary::default(),
+            default_text(PromptId::ToneStandard),
+        );
         assert!(p.contains("Korean"));
         assert!(p.contains("English"));
+    }
+
+    /// A custom template using the "wrong" case still gets filled —
+    /// the engine honours the case-tolerance the validator promises.
+    #[test]
+    fn lowercase_custom_tokens_are_filled_too() {
+        let p = system_prompt("{glossary} ## {tone}", &pair(), &Glossary::default(), "TONE-TEXT");
+        assert!(!p.contains("{glossary}"));
+        assert!(p.contains("TONE-TEXT"));
     }
 
     #[test]
