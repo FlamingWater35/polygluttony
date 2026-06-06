@@ -12,7 +12,7 @@ use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 use crate::events::{LogLevel, LogPhase, RunEvent};
-use crate::llm::error::LlmError;
+use crate::llm::error::{LlmError, CANCELLED_MSG};
 use crate::llm::{LlmDriver, LlmRequest, LlmResponse};
 
 const MAX_ATTEMPTS: u32 = 3;
@@ -68,7 +68,7 @@ impl LlmService {
     async fn acquire(&self) -> Result<(), LlmError> {
         loop {
             if self.cancel.is_cancelled() {
-                return Err(LlmError::Transport("run cancelled".into()));
+                return Err(LlmError::Transport(CANCELLED_MSG.into()));
             }
             // Register BEFORE checking state so a concurrent release()'s
             // notify_waiters() cannot be lost between the state check and the
@@ -92,7 +92,7 @@ impl LlmService {
             };
             tokio::select! {
                 _ = self.cancel.cancelled() => {
-                    return Err(LlmError::Transport("run cancelled".into()));
+                    return Err(LlmError::Transport(CANCELLED_MSG.into()));
                 }
                 _ = async {
                     match wait_until {
@@ -145,12 +145,12 @@ impl LlmService {
         let mut last_err: Option<LlmError> = None;
         for attempt in 1..=MAX_ATTEMPTS {
             if self.cancel.is_cancelled() {
-                return Err(LlmError::Transport("run cancelled".into()));
+                return Err(LlmError::Transport(CANCELLED_MSG.into()));
             }
             self.acquire().await?;
             let started = Instant::now();
             let outcome = tokio::select! {
-                _ = self.cancel.cancelled() => Err(LlmError::Transport("run cancelled".into())),
+                _ = self.cancel.cancelled() => Err(LlmError::Transport(CANCELLED_MSG.into())),
                 r = self.driver.stream(&req) => r,
             };
             let retry_after = match &outcome {
@@ -189,7 +189,7 @@ impl LlmService {
                         );
                         tokio::select! {
                             _ = self.cancel.cancelled() => {
-                                return Err(LlmError::Transport("run cancelled".into()));
+                                return Err(LlmError::Transport(CANCELLED_MSG.into()));
                             }
                             _ = tokio::time::sleep(backoff) => {}
                         }

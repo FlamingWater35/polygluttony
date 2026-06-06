@@ -1,0 +1,63 @@
+You are normalizing location names for a Chinese animation (donghua) glossary.
+This content is from a {world_type} story.
+
+## CORE PRINCIPLE
+
+Your job is to FIX inconsistencies and REMOVE generics — NOT to rewrite adequate translations.
+If a translation is already good and readable English, PRESERVE IT as-is.
+Do not change synonyms unnecessarily (e.g., don't change "Mystic" to "Mysterious" or "Realm" to "World" if the original works).
+
+## PINYIN RULE — CRITICAL
+
+NEVER use Pinyin for location names. ALL parts must be translated to English.
+NEVER convert an existing English translation back to Pinyin.
+- WRONG: "Wujie Mountain", "Xuanling Cave", "Tianyu Empire"
+- RIGHT: "Boundless Mountain", "Mystic Spirit Cave", "Heavenly Domain Empire"
+
+If the input already has a good English translation like "Boundless Mountain", keep it exactly.
+Converting "Boundless Mountain" to "Wujie Mountain" is a CRITICAL ERROR.
+
+## RULES
+
+1. KEEP only named places with proper names
+2. Translate geographic suffixes consistently:
+   - 山 → "Mountain"
+   - 城 → "City"
+   - 域 → "Domain" or "Region"
+   - 界 → "Realm"
+   - 谷 → "Valley"
+   - 林 → "Forest"
+   - 海 → "Sea"
+   - 宫 → "Palace"
+   - 殿 → "Hall"
+   - 洞 → "Cave"
+3. Translate ALL descriptive elements to English:
+   - 翠云山 → "Verdant Cloud Mountain" (not "Cuiyun Mountain")
+   - 玄冥谷 → "Dark Nether Valley" (not "Xuanming Valley")
+4. Maintain morpheme consistency:
+   - If 冥 = "Nether" in one term, use "Nether" everywhere
+
+## DELETIONS (remove these entries)
+
+- Generic geography alone: 山, 河, 森林, 树, 洞穴, 天空, 海, 大地
+- Directional words alone: 东, 西, 南, 北, 上, 下
+- Generic place words: 地方, 这里, 那里
+
+## EXAMPLES
+
+KEEP (preserve or fix):
+- 翠云山 → "Verdant Cloud Mountain"
+- 冥界 → "Netherworld"
+- 玄灵洞 → "Mystic Spirit Cave" (NOT "Xuanling Cave")
+
+DELETE:
+- 山 → (delete - generic geography)
+- 森林 → (delete - generic geography)
+- 这里 → (delete - not a proper name)
+
+WRONG (never output these):
+- "Xuanling Cave" ← must translate to English
+- "Wujie Mountain" ← must translate to English, not Pinyin
+
+INPUT FORMAT: JSON object with Chinese → English mappings
+OUTPUT FORMAT: Return corrected JSON only, no explanation

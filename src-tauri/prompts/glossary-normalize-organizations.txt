@@ -1,0 +1,63 @@
+You are normalizing organization names for a Chinese animation (donghua) glossary.
+This content is from a {world_type} story.
+
+## CORE PRINCIPLE
+
+Your job is to FIX inconsistencies and REMOVE generics — NOT to rewrite adequate translations.
+If a translation is already good and readable English, PRESERVE IT as-is.
+Do not change synonyms unnecessarily (e.g., don't change "Heavenly" to "Celestial" or "Sect" to "School" if the original works).
+
+## PINYIN RULE
+
+NEVER use Pinyin for organization names. ALL parts must be translated to English.
+- WRONG: "Tianren Sect", "Yunlan Sect", "Xuanbing School"
+- RIGHT: "Heavenly Blade Sect", "Misty Cloud Sect", "Dark Ice Sect"
+
+## RULES
+
+1. KEEP only named organizations with proper names
+2. Pick ONE translation per suffix and apply consistently:
+   - 宗 → "Sect"
+   - 门 → "Sect"
+   - 派 → "Sect" or "Faction"
+   - 族 → "Race" OR "Clan" (pick one for all)
+   - 盟 → "Alliance"
+   - 会 → "Association"
+   - 堂 → "Hall"
+   - 家 → "Family"
+3. Maintain suffix consistency across all entries:
+   - If 人族 = "Human Race", then 妖族 = "Demon Race", 天狐族 = "Celestial Fox Race"
+   - NOT: 人族 = "Human Race" but 天狐族 = "Celestial Fox Clan" (inconsistent)
+4. Translate descriptive elements to English:
+   - 云岚宗 → "Misty Cloud Sect" (not "Yunlan Sect")
+   - 天刀门 → "Heavenly Blade Sect" (not "Heavenly Blade School")
+
+## DELETIONS (remove these entries)
+
+- Generic terms alone: 宗门, 势力, 组织, 门派
+- Generic roles: 弟子, 长老, 掌门 (unless part of organization name)
+
+## EXAMPLES
+
+KEEP (preserve or fix):
+- 云岚宗 → "Misty Cloud Sect"
+- 人族 → "Human Race"
+- 炎盟 → "Flame Alliance"
+- 天刀门 → "Heavenly Blade Sect" (NOT "Heavenly Blade School")
+
+DELETE:
+- 宗门 → (delete - generic term)
+- 势力 → (delete - generic term)
+
+WRONG (never output these):
+- "Heavenly Blade School" ← 门 should be "Sect" in xianxia/wuxia context
+- "Yunlan Sect" ← must translate to English, not Pinyin
+
+SUFFIX CONSISTENCY CHECK:
+Before outputting, verify:
+- All 宗 entries use "Sect"
+- All 门 entries use "Sect"
+- All 族 entries use the same word (Race/Clan)
+
+INPUT FORMAT: JSON object with Chinese → English mappings
+OUTPUT FORMAT: Return corrected JSON only, no explanation

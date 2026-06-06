@@ -37,6 +37,8 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .manage(translation::run::RunState::default())
+        .manage(glossary::run::GlossaryRunState::default())
+        .manage(glossary::watch::GlossaryWatchState::default())
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
             commands::list_connections,
@@ -59,6 +61,19 @@ pub fn run() {
             commands::open_folder,
             commands::start_translation,
             commands::cancel_translation,
+            commands::load_glossary,
+            commands::save_glossary,
+            commands::start_glossary_build,
+            commands::cancel_glossary_build,
+            commands::normalize_glossary,
+            commands::import_reference_files,
+            commands::reference_status,
+            commands::clear_reference,
+            commands::export_glossary,
+            commands::open_glossary_editor,
+            commands::watch_glossary,
+            commands::unwatch_glossary,
+            commands::personalization_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

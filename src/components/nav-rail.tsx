@@ -36,6 +36,7 @@ export function NavRail() {
   const hasUsableConnection = useAppStore((s) => s.hasUsableConnection);
   const hasUntranslated = useAppStore((s) => s.hasUntranslated);
   const hasTranslated = useAppStore((s) => s.hasTranslated);
+  const glossaryTerms = useAppStore((s) => s.glossaryTerms);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Returns a gating hint when the destination is disabled, else null.
@@ -80,6 +81,9 @@ export function NavRail() {
           >
             {hasUsableConnection ? "✓" : "⚠"}
           </span>
+        ) : null}
+        {item.to === "/glossary" && glossaryTerms ? (
+          <span className="text-[9px] tabular-nums text-muted-foreground">{glossaryTerms}</span>
         ) : null}
       </div>
     );

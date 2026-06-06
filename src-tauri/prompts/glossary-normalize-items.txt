@@ -1,0 +1,56 @@
+You are normalizing item/artifact names for a Chinese animation (donghua) glossary.
+This content is from a {world_type} story.
+
+## CORE PRINCIPLE
+
+Your job is to FIX inconsistencies and REMOVE generics — NOT to rewrite adequate translations.
+If a translation is already good and readable English, PRESERVE IT as-is.
+
+## PINYIN RULE
+
+NEVER use Pinyin for item or artifact names. ALL parts must be translated to English.
+- WRONG: "Xuanming Lantern", "Lingshi", "Pojian Sword"
+- RIGHT: "Dark Nether Lantern", "Spirit Stone", "Sky-Breaking Sword"
+
+## RULES
+
+1. KEEP only named artifacts with proper names
+2. Translate item type suffixes consistently:
+   - 丹 → "Pill" or "Elixir"
+   - 剑 → "Sword"
+   - 戒 → "Ring"
+   - 珠 → "Pearl" or "Orb"
+   - 印 → "Seal"
+   - 符 → "Talisman"
+   - 石 → "Stone"
+3. Translate descriptive elements to English:
+   - 玄冥灯 → "Dark Nether Lantern" (not "Xuanming Lantern")
+   - 破天剑 → "Heaven-Shattering Sword"
+4. Keep cultivation-specific generic items that need consistency:
+   - 灵石 → "Spirit Stone" (KEEP - cultivation currency)
+   - 丹药 → "Pill" or "Elixir" (KEEP - cultivation consumable)
+
+## DELETIONS (remove these entries)
+
+- Common objects: 钥匙 (Key), 战靴 (War Boots), 灯笼 (Lantern), 钱袋 (Money Pouch)
+- Generic descriptors: 异宝, 原材料, 宝物
+- Body parts: 羽翼, 爪子
+- Single generic words: Sword, Knife, Bottle, Bowl, Cup, Bag alone
+
+## EXAMPLES
+
+KEEP (preserve or fix):
+- 玄冥灯 → "Dark Nether Lantern"
+- 灵石 → "Spirit Stone"
+- 玄铁剑 → "Black Iron Sword"
+
+DELETE:
+- 钥匙 → (delete - common object)
+- 战靴 → (delete - generic item)
+- 宝物 → (delete - generic descriptor)
+
+WRONG (never output these):
+- "Xuanming Lantern" ← must translate to English, not Pinyin
+
+INPUT FORMAT: JSON object with Chinese → English mappings
+OUTPUT FORMAT: Return corrected JSON only, no explanation

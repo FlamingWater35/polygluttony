@@ -1,0 +1,76 @@
+You are extracting proper nouns and consistent terminology from existing English subtitle translations.
+
+## PURPOSE
+
+These terms are from a previous translation of this series. Extract them so they can be used to ensure consistency when translating new episodes.
+
+## CATEGORIES TO EXTRACT
+
+### 1. CHARACTER NAMES
+- Names of characters, both full names and partial names
+- Names with honorifics (e.g., "Senior Brother Li", "Master Chen")
+- Titles attached to names (e.g., "Venerable Qingyun", "Elder Zhang")
+- Examples: "Xiao Yan", "Senior Brother Li", "Master Chen", "Queen Medusa"
+
+### 2. CULTIVATION LEVELS
+- Ranks, stages, realms of power progression
+- Both romanized and translated terms
+- Examples: "Dou Zhe", "Foundation Establishment Stage", "Dou Shi", "Battle Spirit"
+
+### 3. SKILLS & ABILITIES
+- Technique names, martial arts, spells
+- Named abilities and cultivation methods
+- Examples: "Flame Devouring Heaven Technique", "Angry Buddha Lotus Flame", "Three Thousand Lightning Movement"
+
+### 4. LOCATIONS
+- Places, regions, realms, landmarks
+- Academy/sect names, cities, geographic features
+- Examples: "Canaan Academy", "Black-Corner Region", "Misty Cloud Sect Peak"
+
+### 5. ITEMS & ARTIFACTS
+- Weapons, pills, treasures with specific names
+- Graded/ranked items
+- Examples: "Xuan-grade Pill", "Heaven Flame", "Flame Mantra"
+
+### 6. ORGANIZATIONS
+- Sects, clans, families, factions, empires
+- Named groups and affiliations
+- Examples: "Misty Cloud Sect", "Jia Ma Empire", "Xiao Clan"
+
+## EXTRACTION RULES
+
+1. **Extract PROPER NOUNS only** - Names that are capitalized, specific terms
+2. **Include romanized Chinese terms** - Terms like "Dou Zhe", "Qi", "Dou Qi"
+3. **Include translated terms** - "Battle Spirit", "Martial Artist", "Foundation Stage"
+4. **Maintain exact spelling/capitalization** - Extract exactly as written in the source
+5. **Deduplicate** - Each unique term appears once
+6. **Skip generic words** - Don't extract common words like "he", "she", "the", "master" (unless part of a name)
+
+## WHAT TO AVOID
+
+Do NOT extract:
+- Common pronouns and articles
+- Generic descriptions ("the old man", "that person")
+- Verbs and action words
+- Adjectives not part of a proper name
+- Numbers unless part of a name
+- Common words used generically ("master" alone, "brother" alone)
+
+## OUTPUT FORMAT
+
+Return ONLY valid JSON in this exact format:
+
+{
+  "characters": ["Name1", "Name2", ...],
+  "cultivation": ["Level1", "Level2", ...],
+  "skills": ["Skill1", "Skill2", ...],
+  "locations": ["Place1", "Place2", ...],
+  "items": ["Item1", "Item2", ...],
+  "organizations": ["Org1", "Org2", ...]
+}
+
+If a category has no terms, use an empty array: "category": []
+
+## SUBTITLE CONTENT
+
+Analyze the following English subtitle content and extract terminology:

@@ -2,6 +2,11 @@
 
 use thiserror::Error;
 
+/// Message every request fails with (as [`LlmError::Transport`]) once the
+/// run's CancellationToken trips. Pipelines match on it to tell "stopped
+/// because the run stopped" apart from real transport failures.
+pub const CANCELLED_MSG: &str = "run cancelled";
+
 #[derive(Debug, Error)]
 pub enum LlmError {
     /// Non-2xx HTTP response, carrying the status + a body snippet.

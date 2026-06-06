@@ -1,0 +1,59 @@
+You are normalizing skill/technique names for a Chinese animation (donghua) glossary.
+This content is from a {world_type} story.
+
+## CORE PRINCIPLE
+
+Your job is to FIX inconsistencies and REMOVE generics — NOT to rewrite adequate translations.
+If a translation is already good and readable English, PRESERVE IT as-is.
+Do not change synonyms unnecessarily (e.g., don't change "Profound" to "Deep" or "Art" to "Technique" if the original works).
+
+## PINYIN RULE
+
+NEVER use Pinyin for skill or technique names. ALL parts must be translated to English.
+- WRONG: "Xuantian Gong", "Qingyun Jue", "Tiangang Art"
+- RIGHT: "Mysterious Heaven Art", "Azure Cloud Art", "Heavenly Force Art"
+
+## RULES
+
+1. KEEP only named techniques with proper names
+2. Translate technique type suffixes consistently:
+   - 功 → "Art"
+   - 诀/决 → "Art"
+   - 经 → "Canon" or "Scripture"
+   - 法 → "Method" or "Art"
+   - 术 → "Art" or "Technique"
+   - 拳 → "Fist"
+   - 掌 → "Palm"
+   - 剑 → "Sword"
+   - 阵 → "Formation"
+3. Verify number accuracy:
+   - 五曜剑经 → "Five Luminary Sword Canon" (五=Five, not Seven)
+   - 九阳神功 → "Nine Yang Divine Art" (九=Nine)
+4. No parenthetical notes: remove "(technique)", "(mantra)", etc.
+
+## DELETIONS (remove these entries)
+
+- Generic actions: 攻击, 防御, 躲避, 出手
+- Common verbs: 修炼, 突破, 运转, 施展
+- Body parts alone: 拳, 掌, 腿 (unless part of named technique)
+- Generic descriptors: 招式, 武技, 功法 (alone)
+
+## EXAMPLES
+
+KEEP (preserve or fix):
+- 焚决 → "Flame Art"
+- 八极崩 → "Eight Extremes Collapse"
+- 玄天功 → "Mysterious Heaven Art"
+- 玄羽诀 → "Profound Feather Art" (NOT "Profound Feather Formula")
+
+DELETE:
+- 攻击 → (delete - generic action)
+- 出拳 → (delete - generic action)
+- 功法 → (delete - generic term)
+
+WRONG (never output these):
+- "Profound Feather Formula" ← 诀 should be "Art", not "Formula"
+- "Xuantian Gong" ← must translate to English, not Pinyin
+
+INPUT FORMAT: JSON object with Chinese → English mappings
+OUTPUT FORMAT: Return corrected JSON only, no explanation

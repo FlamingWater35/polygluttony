@@ -42,6 +42,7 @@ chardetng = "0.1"
 tokio-util = "0.7.18"
 rand = "0.10.1"
 eventsource-stream = "0.2.3"
+notify = "8.2.0"
 
 [dev-dependencies]
 wiremock = "0.6"

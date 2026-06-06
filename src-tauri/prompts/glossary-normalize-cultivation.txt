@@ -1,0 +1,65 @@
+You are normalizing cultivation terms for a Chinese animation (donghua) glossary.
+This content is from a {world_type} story.
+
+## CORE PRINCIPLE
+
+Your job is to FIX inconsistencies and REMOVE generics — NOT to rewrite adequate translations.
+If a translation is already good and readable English, PRESERVE IT as-is.
+Do not swap synonyms unnecessarily:
+- "Divine Venerable Realm" is fine — do NOT change to "God Venerable Realm"
+- "Mortal Realm" is fine — do NOT change to "Mortal World"
+- Only change if the translation is genuinely wrong or inconsistent with the rest
+
+## PINYIN RULE
+
+NEVER use Pinyin for cultivation terms. ALL parts must be translated to English.
+
+## CRITICAL RULES (must follow exactly)
+
+1. 重 → "Layer" (NEVER "Stage", NEVER "Level")
+2. 境 → "Realm"
+3. 期 → "Stage"
+
+4. Numbers → ordinal WORDS (NEVER digits, NEVER digit ordinals)
+   - 一 → First, 二 → Second, 三 → Third, 四 → Fourth, 五 → Fifth
+   - 六 → Sixth, 七 → Seventh, 八 → Eighth, 九 → Ninth, 十 → Tenth
+
+5. Translate realm names to English (not Pinyin):
+   - 后天 → "Postnatal" (NOT "Houtian")
+   - 先天 → "Prenatal" (NOT "Xiantian")
+   - 天武 → "Heavenly Martial" (NOT "Tianwu")
+   - 金丹 → "Golden Core" (NOT "Jindan")
+   - 元婴 → "Nascent Soul" (NOT "Yuanying")
+   - 化神 → "Spirit Transformation"
+   - 纳气 → "Qi Gathering"
+   - 筑基 → "Foundation Establishment"
+
+6. Modifiers:
+   - 初期 → "Early Stage"
+   - 中期 → "Middle Stage"
+   - 后期 → "Late Stage"
+   - 巅峰 → "Peak"
+
+## CORRECT EXAMPLES
+
+- 后天六重 → "Postnatal Sixth Layer"
+- 纳气三重境 → "Qi Gathering Third Layer Realm"
+- 化灵初期 → "Spirit Transformation Early Stage"
+- 天武九重 → "Heavenly Martial Ninth Layer"
+- 金丹后期 → "Golden Core Late Stage"
+
+## WRONG (never output these)
+
+- "Stage 2", "Level 3", "2nd Layer" ← must use ordinal words
+- "Tianwu", "Houtian", "Xiantian" ← must translate to English
+- "Sixth Stage" for 六重 ← 重 must be "Layer"
+- "Sixth Level" for 六重 ← 重 must be "Layer"
+- "God Venerable Realm" when input has "Divine Venerable Realm" ← don't swap synonyms
+
+## DELETIONS (remove these entries)
+
+- Standalone generic terms: 后天 alone, 先天 alone, 修炼, 突破, 领悟
+- Generic power words: 高手, 强者, 天才, 底蕴
+
+INPUT FORMAT: JSON object with Chinese → English mappings
+OUTPUT FORMAT: Return corrected JSON only, no explanation

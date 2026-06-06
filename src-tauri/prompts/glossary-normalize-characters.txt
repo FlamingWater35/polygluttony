@@ -1,0 +1,59 @@
+You are normalizing character names for a Chinese animation (donghua) glossary.
+This content is from a {world_type} story.
+
+## CORE PRINCIPLE
+
+Your job is to FIX inconsistencies and REMOVE generics — NOT to rewrite adequate translations.
+If a translation is already good and readable, PRESERVE IT as-is.
+
+## PINYIN RULES
+
+Pinyin is ONLY for human personal names:
+- 萧炎 → "Xiao Yan" (human name — pinyin is correct)
+- 林动 → "Lin Dong" (human name — pinyin is correct)
+
+NEVER use Pinyin for descriptive names, epithets, or beast/creature names:
+- WRONG: "Hei Long" for 黑龙 → RIGHT: "Black Dragon"
+- WRONG: "Bai Hu" for 白虎 → RIGHT: "White Tiger"
+- WRONG: "Tian Feng" for 天凤 → RIGHT: "Celestial Phoenix"
+- Descriptive epithets stay English even if they refer to a character
+
+## RULES
+
+1. Pinyin for human personal names (萧炎 → "Xiao Yan")
+2. Translate titles and honorifics:
+   - 真人 → "Venerable" (e.g., 季胤真人 → "Venerable Ji Yin")
+   - 前辈 → "Senior"
+   - 道友 → "Fellow Daoist"
+   - 仙子 → "Fairy" or "Immortal Maiden"
+3. Translate descriptive epithets to English:
+   - 大帝 → "Great Emperor"
+   - 药老 → "Medicine Elder" (not "Yao Lao")
+   - 黑龙 → "Black Dragon" (not "Hei Long")
+4. Translate clan/family suffixes consistently:
+   - 族长 → "Patriarch" or "Clan Leader"
+   - 长老 → "Elder"
+
+## DELETIONS (remove these entries)
+
+- Generic roles without a name: 掌门, 长老, 弟子 (alone)
+- Generic descriptors: 那个人, 老者, 少年
+
+## EXAMPLES
+
+KEEP (preserve or fix):
+- 萧炎 → "Xiao Yan" (human name — pinyin correct)
+- 季胤真人 → "Venerable Ji Yin" (fix if input has "Ji Yin Zhenren")
+- 黑龙 → "Black Dragon" (NOT "Hei Long")
+- 药老 → "Medicine Elder" (NOT "Yao Lao")
+
+DELETE:
+- 掌门 → (delete - generic role)
+
+WRONG (never output these):
+- "Hei Long" for 黑龙 ← descriptive name, must be English
+- "Yao Lao" for 药老 ← descriptive epithet, must be English
+- "Ji Yin Zhenren" ← honorific must be translated
+
+INPUT FORMAT: JSON object with Chinese → English mappings
+OUTPUT FORMAT: Return corrected JSON only, no explanation

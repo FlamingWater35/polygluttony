@@ -12,6 +12,7 @@ interface ProjectState {
   dialogueLineCount: number;
   hasUntranslated: boolean;
   hasTranslated: boolean;
+  glossaryTerms: number | null;
 }
 
 interface AppState {
@@ -24,6 +25,7 @@ interface AppState {
   dialogueLineCount: number;
   hasUntranslated: boolean;
   hasTranslated: boolean;
+  glossaryTerms: number | null;
   activeConnection: string | null;
   hasUsableConnection: boolean;
   setWorkdir: (dir: string | null) => void;
@@ -32,6 +34,7 @@ interface AppState {
   clearProject: () => void;
   setActiveConnection: (name: string | null) => void;
   setHasUsableConnection: (v: boolean) => void;
+  setGlossaryTerms: (n: number | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -44,6 +47,7 @@ export const useAppStore = create<AppState>((set) => ({
   dialogueLineCount: 0,
   hasUntranslated: false,
   hasTranslated: false,
+  glossaryTerms: null,
   activeConnection: null,
   hasUsableConnection: false,
   setWorkdir: (workdir) => set({ workdir }),
@@ -57,7 +61,9 @@ export const useAppStore = create<AppState>((set) => ({
       dialogueLineCount: 0,
       hasUntranslated: false,
       hasTranslated: false,
+      glossaryTerms: null,
     }),
   setActiveConnection: (activeConnection) => set({ activeConnection }),
   setHasUsableConnection: (hasUsableConnection) => set({ hasUsableConnection }),
+  setGlossaryTerms: (glossaryTerms) => set({ glossaryTerms }),
 }));
