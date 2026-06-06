@@ -46,17 +46,12 @@ export const ipc = {
   /** Set the personalization (web-lookup) connection. */
   setPersonalizationConnection: (name: string) =>
     invoke<void>("set_personalization_connection", { name }),
-  /**
-   * O5 — test a connection. For Custom connections the caller should set
-   * `connection.prompt_template = "__detect__"` to trigger auto-detection.
-   */
-  testConnection: (connection: Connection) =>
-    invoke<TestResult>("test_connection", { connection }),
-  /**
-   * Fetch live model list for a connection. Same detection sentinel applies
-   * for Custom: set `connection.prompt_template = "__detect__"`.
-   */
-  listModels: (connection: Connection) => invoke<string[]>("list_models", { connection }),
+  /** O5 — test a connection. `detect: true` probes the endpoint's API format (Custom preset). */
+  testConnection: (connection: Connection, detect: boolean) =>
+    invoke<TestResult>("test_connection", { connection, detect }),
+  /** Fetch live model list. Same `detect` flag as testConnection for Custom. */
+  listModels: (connection: Connection, detect: boolean) =>
+    invoke<string[]>("list_models", { connection, detect }),
   /** O6/O7/O8 — open a folder: discover files, counts, detect world/language, load prefs. */
   openFolder: (path: string) =>
     invoke<ProjectView>("open_folder", { path, now: Math.floor(Date.now() / 1000) }),

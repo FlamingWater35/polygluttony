@@ -101,15 +101,11 @@ fn probe_connection(mut c: Connection, driver: Driver) -> Connection {
 }
 
 #[tauri::command]
-pub async fn test_connection(connection: Connection) -> AppResult<TestResult> {
+pub async fn test_connection(connection: Connection, detect: bool) -> AppResult<TestResult> {
     // Resolve the driver: trust an explicit driver, but for a Custom connection
-    // the UI sends `prompt_template == "__detect__"` as the detection sentinel.
-    // Read base_url/api_key BEFORE moving connection into probe_connection.
-    let detect = connection.prompt_template.as_deref() == Some("__detect__");
+    // the UI passes `detect = true` to probe the endpoint's API format.
     let (driver, detected) = if detect {
-        let base_url = connection.base_url.clone();
-        let api_key = connection.api_key.clone();
-        match detect_format(&base_url, &api_key).await {
+        match detect_format(&connection.base_url, &connection.api_key).await {
             Ok(d) => (d, Some(d)),
             // Undetermined format (both routes 404 / host unreachable): surface a
             // graceful TestResult rather than an IPC-level error (spec §5.7).
@@ -126,8 +122,7 @@ pub async fn test_connection(connection: Connection) -> AppResult<TestResult> {
         (connection.driver, None)
     };
 
-    let mut probe = probe_connection(connection, driver);
-    probe.prompt_template = None; // strip the sentinel
+    let probe = probe_connection(connection, driver);
     let model = probe.model.clone();
     let client = create_driver(probe);
     match client.complete("Reply with OK.", "ping").await {
@@ -156,16 +151,13 @@ pub async fn test_connection(connection: Connection) -> AppResult<TestResult> {
 }
 
 #[tauri::command]
-pub async fn list_models(connection: Connection) -> AppResult<Vec<String>> {
-    let driver = if connection.prompt_template.as_deref() == Some("__detect__") {
-        let base_url = connection.base_url.clone();
-        let api_key = connection.api_key.clone();
-        detect_format(&base_url, &api_key).await?
+pub async fn list_models(connection: Connection, detect: bool) -> AppResult<Vec<String>> {
+    let driver = if detect {
+        detect_format(&connection.base_url, &connection.api_key).await?
     } else {
         connection.driver
     };
     let mut c = connection;
-    c.prompt_template = None;
     c.driver = driver;
     Ok(create_driver(c).list_models().await.unwrap_or_default())
 }

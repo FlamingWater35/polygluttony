@@ -145,7 +145,7 @@ mod tests {
             model: "claude-x".into(), max_tokens: Some(16), batch_dialogue_limit: None,
             timeout: Some(10), connect_timeout: None, concurrency: None,
             thinking_enabled: Some(false), thinking_budget: None, web_search: None,
-            prompt_template: None, thinking_glossary_norm_budget: None,
+            thinking_glossary_norm_budget: None,
         }
     }
 

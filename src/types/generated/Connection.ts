@@ -4,4 +4,4 @@ import type { Driver } from "./Driver";
 /**
  * A single named LLM connection.
  */
-export type Connection = { driver: Driver, base_url: string, api_key: string, model: string, max_tokens: number | null, batch_dialogue_limit: number | null, timeout: number | null, connect_timeout: number | null, concurrency: number | null, thinking_enabled: boolean | null, thinking_budget: number | null, web_search: boolean | null, prompt_template: string | null, thinking_glossary_norm_budget: number | null, };
+export type Connection = { driver: Driver, base_url: string, api_key: string, model: string, max_tokens: number | null, batch_dialogue_limit: number | null, timeout: number | null, connect_timeout: number | null, concurrency: number | null, thinking_enabled: boolean | null, thinking_budget: number | null, web_search: boolean | null, thinking_glossary_norm_budget: number | null, };

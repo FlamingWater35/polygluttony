@@ -71,8 +71,8 @@ export function ConnectionsPage() {
               await m.rename.mutateAsync({ oldName, newName });
               setSelected(newName);
             }}
-            onTest={(c) => m.test.mutateAsync(c)}
-            onListModels={(c) => m.listModels.mutateAsync(c)}
+            onTest={(c, detect) => m.test.mutateAsync({ connection: c, detect })}
+            onListModels={(c, detect) => m.listModels.mutateAsync({ connection: c, detect })}
           />
         ) : null}
       </div>

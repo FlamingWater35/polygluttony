@@ -138,7 +138,7 @@ mod tests {
             model: "gpt-5.2".into(), max_tokens: Some(16), batch_dialogue_limit: None,
             timeout: Some(10), connect_timeout: None, concurrency: None,
             thinking_enabled: None, thinking_budget: None, web_search: Some(false),
-            prompt_template: None, thinking_glossary_norm_budget: None,
+            thinking_glossary_norm_budget: None,
         }
     }
 

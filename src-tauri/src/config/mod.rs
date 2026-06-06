@@ -50,8 +50,6 @@ pub struct Connection {
     #[serde(default)]
     pub web_search: Option<bool>,
     #[serde(default)]
-    pub prompt_template: Option<String>,
-    #[serde(default)]
     pub thinking_glossary_norm_budget: Option<u32>,
 }
 
@@ -74,18 +72,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn connection_round_trips_new_fields() {
+    fn connection_tolerates_removed_prompt_template_field() {
+        // Stored configs may still carry `prompt_template` from older versions;
+        // serde must ignore it rather than fail the load.
         let json = r#"{
             "driver":"anthropic","base_url":"https://x","api_key":"k","model":"m",
             "prompt_template":"qwen","thinking_glossary_norm_budget":4096
         }"#;
         let c: Connection = serde_json::from_str(json).unwrap();
-        assert_eq!(c.prompt_template.as_deref(), Some("qwen"));
         assert_eq!(c.thinking_glossary_norm_budget, Some(4096));
         // Optional fields default to None when absent.
         let minimal: Connection =
             serde_json::from_str(r#"{"driver":"openai","base_url":"u","model":"m"}"#).unwrap();
-        assert_eq!(minimal.prompt_template, None);
         assert_eq!(minimal.api_key, "");
     }
 }
