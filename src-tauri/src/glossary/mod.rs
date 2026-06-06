@@ -15,6 +15,7 @@
 //! - `build`       — O10 build orchestrator (`build_glossary`) + cross-file batch helper
 //! - `normalize`   — per-category normalize pass (`normalize_pass`, O12)
 //! - `personalize` — personalization pass (`personalize_pass`, build step 8)
+//! - `run`         — run manager (single glossary-op slot, exclusivity with translation)
 
 pub mod build;
 pub mod diff;
@@ -24,4 +25,5 @@ pub mod normalize;
 pub mod personalize;
 pub mod prompts;
 pub mod reference;
+pub mod run;
 pub mod world_detector;

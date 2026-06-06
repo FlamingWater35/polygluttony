@@ -20,7 +20,7 @@ pub enum AppError {
     #[error("{0}")]
     Other(String),
 
-    #[error("a translation run is already active")]
+    #[error("another operation is already running")]
     RunAlreadyActive,
 
     #[error("no usable connection — configure one in Connections")]

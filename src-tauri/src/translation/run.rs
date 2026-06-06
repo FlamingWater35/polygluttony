@@ -73,6 +73,15 @@ pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
     if guard.is_some() {
         return Err(AppError::RunAlreadyActive);
     }
+    // Exclusivity with glossary operations. Lock ordering: RunState (already
+    // held here) FIRST, then GlossaryRunState — glossary::run::claim_slot uses
+    // the same order.
+    {
+        let g_state = app.state::<crate::glossary::run::GlossaryRunState>();
+        if g_state.0.lock().await.is_some() {
+            return Err(AppError::RunAlreadyActive);
+        }
+    }
 
     let cfg = config_store::load(&app)?;
     let conn = usable_connection(&cfg).ok_or(AppError::NoActiveConnection)?;
