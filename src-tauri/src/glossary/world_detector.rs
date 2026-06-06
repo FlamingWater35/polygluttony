@@ -16,6 +16,21 @@ pub enum WorldType {
     Modern,
 }
 
+impl WorldType {
+    /// Lowercase string for prompts and the glossary.json `world_type` field
+    /// (matches the serde `lowercase` rename).
+    // consumed by the glossary build pipeline (later step-4 task)
+    #[allow(dead_code)]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            WorldType::Xianxia => "xianxia",
+            WorldType::Wuxia => "wuxia",
+            WorldType::Historical => "historical",
+            WorldType::Modern => "modern",
+        }
+    }
+}
+
 const XIANXIA: &[&str] = &[
     "修仙", "筑基", "金丹", "元婴", "渡劫", "灵气", "仙人", "修炼", "灵石", "丹药",
     "法宝", "飞剑", "结丹", "化神", "修真", "仙界", "魔界", "灵根", "天劫", "飞升",
@@ -75,5 +90,13 @@ mod tests {
     fn ties_break_in_priority_order() {
         // one xianxia + one wuxia keyword → xianxia wins the tie.
         assert_eq!(detect("修仙 江湖", true), WorldType::Xianxia);
+    }
+
+    #[test]
+    fn as_str_is_lowercase_and_total() {
+        assert_eq!(WorldType::Xianxia.as_str(), "xianxia");
+        assert_eq!(WorldType::Wuxia.as_str(), "wuxia");
+        assert_eq!(WorldType::Historical.as_str(), "historical");
+        assert_eq!(WorldType::Modern.as_str(), "modern");
     }
 }
