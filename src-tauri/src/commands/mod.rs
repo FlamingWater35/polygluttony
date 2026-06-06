@@ -4,6 +4,9 @@
 pub mod connections;
 pub use connections::*;
 
+pub mod glossary;
+pub use glossary::*;
+
 pub mod project;
 pub use project::*;
 

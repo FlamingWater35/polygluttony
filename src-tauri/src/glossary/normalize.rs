@@ -22,8 +22,6 @@ use crate::translation::parse_response;
 
 /// O12 result: the normalized glossary + diff, NOT yet saved — the UI shows a
 /// review and saves on accept.
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]
 pub struct NormalizeReview {
@@ -66,8 +64,6 @@ fn parse_category_response(text: &str) -> Result<BTreeMap<String, String>, Strin
 /// concurrency). World type comes from the glossary itself
 /// (`glossary_builder.py:504`: `glossary.world_type or "modern"`). A failed
 /// category keeps its original terms (ONE warning log per failure).
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 pub async fn normalize_pass(
     svc: &LlmService,
     glossary: &Glossary,

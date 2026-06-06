@@ -17,8 +17,6 @@ pub fn load_folder_glossary(folder: &Path) -> Option<Glossary> {
 /// file is user-editable via "Open in editor"). rename is atomic against
 /// process crashes; we deliberately skip fsync — a power-loss-torn glossary
 /// is recoverable by rebuilding.
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 pub fn save_folder_glossary(folder: &Path, glossary: &Glossary) -> AppResult<()> {
     let tmp = folder.join(".glossary.json.tmp");
     std::fs::write(&tmp, glossary.to_json_pretty())?;

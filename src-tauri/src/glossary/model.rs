@@ -22,8 +22,6 @@ fn header(category: &str) -> &'static str {
 }
 
 /// Webview-facing glossary document (O9/O14). `terms` is category → map.
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]
 pub struct GlossaryDoc {
@@ -44,8 +42,6 @@ impl From<&Glossary> for GlossaryDoc {
 
 impl GlossaryDoc {
     /// Unknown categories in `terms` are dropped; `count` is ignored (derived).
-    // consumed by commands/glossary (later step-4 task)
-    #[allow(dead_code)]
     pub fn into_glossary(self) -> Glossary {
         let mut g = Glossary::new(&self.world_type);
         for c in CATEGORIES {

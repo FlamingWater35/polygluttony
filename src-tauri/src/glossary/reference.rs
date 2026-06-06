@@ -154,8 +154,6 @@ pub fn load_cache(folder: &Path) -> Option<ReferenceTerminology> {
     serde_json::from_str(&text).ok()
 }
 
-// consumed by the O11 command (later step-4 task)
-#[allow(dead_code)]
 pub fn save_cache(folder: &Path, t: &ReferenceTerminology) -> AppResult<()> {
     let json = serde_json::to_string_pretty(t)?;
     std::fs::write(folder.join(CACHE_FILENAME), json)?;
@@ -163,8 +161,6 @@ pub fn save_cache(folder: &Path, t: &ReferenceTerminology) -> AppResult<()> {
 }
 
 /// Idempotent delete (missing file is fine).
-// consumed by the O11 command (later step-4 task)
-#[allow(dead_code)]
 pub fn clear_cache(folder: &Path) -> AppResult<()> {
     match std::fs::remove_file(folder.join(CACHE_FILENAME)) {
         Ok(()) => Ok(()),
@@ -218,8 +214,6 @@ pub enum ReferenceSource {
 
 /// What the Import card chip shows. `count` = terms when cached, `.ass` file
 /// count when only a ref/ dir exists.
-// consumed by the O11 command (later step-4 task)
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]
 pub struct ReferenceStatus {
@@ -227,8 +221,6 @@ pub struct ReferenceStatus {
     pub count: u32,
 }
 
-// consumed by the O11 command (later step-4 task)
-#[allow(dead_code)]
 pub fn reference_status(folder: &Path) -> ReferenceStatus {
     if let Some(t) = load_cache(folder) {
         return ReferenceStatus { source: ReferenceSource::Cached, count: t.count() as u32 };
@@ -243,8 +235,6 @@ pub fn reference_status(folder: &Path) -> ReferenceStatus {
 }
 
 /// Result of an explicit Import (O11 picker path).
-// consumed by the O11 command (later step-4 task)
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]
 pub struct ReferenceSummary {
@@ -255,9 +245,6 @@ pub struct ReferenceSummary {
 
 /// Dialogue lines from reference `.ass` files; unparseable files are skipped
 /// (`reference_extractor.py:100-122`).
-// consumed by extract_from_files below (which is #[allow(dead_code)] until
-// the O11 command arrives in the next task)
-#[allow(dead_code)]
 fn collect_dialogue_lines(files: &[PathBuf]) -> (Vec<String>, u32) {
     let mut lines = Vec::new();
     let mut ok = 0u32;
@@ -278,8 +265,6 @@ fn collect_dialogue_lines(files: &[PathBuf]) -> (Vec<String>, u32) {
 /// BatchManager), merge sorted by batch index, dedupe. Both LLM failures and
 /// unparseable responses are recorded in `errors` and skipped — NEVER fatal.
 /// Returns (terms, files_processed, errors).
-// consumed by the O11 command (later step-4 task) and load_or_extract below
-#[allow(dead_code)]
 pub async fn extract_from_files(
     svc: &LlmService,
     files: &[PathBuf],

@@ -37,8 +37,6 @@ pub struct CategoryDiff {
     pub unchanged: u32,
 }
 
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]
 pub struct GlossaryDiff {
@@ -62,8 +60,6 @@ fn label(category: &str) -> String {
 impl GlossaryDiff {
     /// `old = None` means a fresh build — everything is `Added`
     /// (`diff.py:120-161`). Categories empty on both sides are omitted.
-    // consumed by commands/glossary (later step-4 task)
-    #[allow(dead_code)]
     pub fn compute(old: Option<&Glossary>, new: &Glossary) -> GlossaryDiff {
         let mut categories = Vec::new();
         let (mut ta, mut tr, mut tm) = (0u32, 0u32, 0u32);

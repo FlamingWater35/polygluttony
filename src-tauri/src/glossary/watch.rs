@@ -44,8 +44,6 @@ fn is_glossary_event(paths: &[std::path::PathBuf]) -> bool {
 }
 
 /// Replaces any existing watch (single slot).
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 pub fn watch(app: AppHandle, state: &GlossaryWatchState, folder: &Path) -> AppResult<()> {
     let last = Mutex::new(None::<Instant>);
     let mut watcher = notify::recommended_watcher(
@@ -68,8 +66,6 @@ pub fn watch(app: AppHandle, state: &GlossaryWatchState, folder: &Path) -> AppRe
     Ok(())
 }
 
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 pub fn unwatch(state: &GlossaryWatchState) {
     *state.0.lock().unwrap() = None;
 }

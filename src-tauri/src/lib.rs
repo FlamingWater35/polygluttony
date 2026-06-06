@@ -61,6 +61,19 @@ pub fn run() {
             commands::open_folder,
             commands::start_translation,
             commands::cancel_translation,
+            commands::load_glossary,
+            commands::save_glossary,
+            commands::start_glossary_build,
+            commands::cancel_glossary_build,
+            commands::normalize_glossary,
+            commands::import_reference_files,
+            commands::reference_status,
+            commands::clear_reference,
+            commands::export_glossary,
+            commands::open_glossary_editor,
+            commands::watch_glossary,
+            commands::unwatch_glossary,
+            commands::personalization_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

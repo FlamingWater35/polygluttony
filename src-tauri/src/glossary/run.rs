@@ -33,15 +33,10 @@ pub struct GlossaryOpHandle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GlossaryOpKind {
     Build,
-    // claimed by the normalize/import commands (later step-4 tasks)
-    #[allow(dead_code)]
     Normalize,
-    #[allow(dead_code)]
     Import,
 }
 
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 pub struct StartArgs {
     pub folder: String,
     pub files: Vec<String>,
@@ -104,8 +99,6 @@ pub fn llm_log_channel(g_tx: mpsc::Sender<GlossaryEvent>) -> mpsc::Sender<RunEve
 }
 
 /// Build an `LlmService` for a glossary op on `conn`.
-// consumed by the normalize/import commands too (later step-4 tasks)
-#[allow(dead_code)]
 pub fn service_for(
     conn: &Connection,
     cancel: CancellationToken,
@@ -131,8 +124,6 @@ pub fn web_capable_personalization(cfg: &AppConfig) -> Option<(String, Connectio
     }
 }
 
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
     if args.files.is_empty() {
         return Err(AppError::Other("no files selected".into()));
@@ -191,8 +182,6 @@ pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
 }
 
 /// Cancels whichever glossary op holds the slot (build, normalize, import).
-// consumed by commands/glossary (later step-4 task)
-#[allow(dead_code)]
 pub async fn cancel(app: AppHandle) -> AppResult<()> {
     let state = app.state::<GlossaryRunState>();
     let guard = state.0.lock().await;
