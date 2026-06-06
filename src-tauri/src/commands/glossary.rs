@@ -10,7 +10,7 @@ use crate::glossary::diff::GlossaryDiff;
 use crate::glossary::io::{load_folder_glossary, save_folder_glossary};
 use crate::glossary::model::GlossaryDoc;
 use crate::glossary::normalize::{normalize_pass, NormalizeReview};
-use crate::glossary::reference::{self, ReferenceStatus, ReferenceSummary};
+use crate::glossary::reference::{self, ReferenceStatus, ReferenceSummary, ReferenceTerminology};
 use crate::glossary::run::{self, GlossaryOpKind, StartArgs};
 use crate::glossary::watch::{self, GlossaryWatchState};
 use crate::glossary::world_detector::WorldType;
@@ -136,6 +136,19 @@ pub fn reference_status(folder: String) -> ReferenceStatus {
 #[tauri::command]
 pub fn clear_reference(folder: String) -> AppResult<()> {
     reference::clear_cache(&PathBuf::from(folder))
+}
+
+/// Load the cached reference terminology for the review screen (None = no cache).
+#[tauri::command]
+pub fn load_reference(folder: String) -> Option<ReferenceTerminology> {
+    reference::load_cache(&PathBuf::from(folder))
+}
+
+/// Persist review-screen edits (term pruning). Saving an empty terminology is
+/// allowed and keeps the file — explicit Clear deletes it via `clear_reference`.
+#[tauri::command]
+pub fn save_reference(folder: String, terms: ReferenceTerminology) -> AppResult<()> {
+    reference::save_cache(&PathBuf::from(folder), &terms)
 }
 
 /// Plain file copy; the UI supplies `dest` from a save dialog.

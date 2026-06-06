@@ -38,7 +38,8 @@ const CATEGORY_LABELS: [(&str, &str); 6] = [
 ];
 
 /// Six list-categories of English terms (no source mapping — guidance only).
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/generated/")]
 pub struct ReferenceTerminology {
     #[serde(default)]
     pub characters: Vec<String>,
