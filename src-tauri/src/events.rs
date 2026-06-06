@@ -7,24 +7,25 @@ use ts_rs::TS;
 
 /// Event channel names. Keep in sync with the frontend listeners.
 pub mod names {
-    // Step 4 (Glossary) and Step 5 (Verify/Translate views) will consume these.
+    // The Translate page consumes TRANSLATION_EVENT (the tagged-union channel);
+    // TRANSLATION_PROGRESS is retained here in case external tooling needs it.
     #[allow(dead_code)]
     pub const TRANSLATION_PROGRESS: &str = "translation://progress";
-    // Superseded by GLOSSARY_EVENT (step 4 uses the tagged-union channel
-    // instead); kept here in case external tooling or future steps need it.
+    // Superseded by GLOSSARY_EVENT (the Glossary view uses the tagged-union
+    // channel instead); kept here in case external tooling needs it.
     #[allow(dead_code)]
     pub const GLOSSARY_PROGRESS: &str = "glossary://progress";
-    #[allow(dead_code)]
-    pub const VERIFICATION_PROGRESS: &str = "verification://progress";
     #[allow(dead_code)]
     pub const LOG: &str = "core://log";
 }
 
 /// Generic progress payload for a single unit of work (e.g. a file).
 // Legacy placeholder from the initial event sketch. Not currently emitted by
-// any pipeline (step 4 uses `GLOSSARY_EVENT`; step 3 uses `TRANSLATION_EVENT`).
-// Retained for a potential future Verify or similar step that may want a
-// generic per-file progress payload.
+// any pipeline (Glossary uses `GLOSSARY_EVENT`; Translate uses `TRANSLATION_EVENT`;
+// verification is embedded in the translation pipeline and reported via
+// `RunEvent::State { state: FileStateKind::Verifying, .. }` on `TRANSLATION_EVENT`).
+// Retained in case external tooling or a future step wants a generic per-file
+// progress payload.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/generated/")]

@@ -96,10 +96,10 @@ pub async fn verify_file(
         };
         let resp = match svc.request(req).await {
             Ok(r) => r,
-            // Auth death must NOT degrade gracefully — a dead key between
-            // translate and verify would otherwise report "clean without
-            // verification" (carry-forward fix).
-            Err(e) if e.is_auth() => return Err(e),
+            // Auth death and user cancellation must NOT degrade gracefully —
+            // a dead key or mid-verify cancel would otherwise finish the file
+            // as "clean without verification" and write unverified output.
+            Err(e) if e.is_auth() || e.is_cancelled() => return Err(e),
             // Other failures keep degrading gracefully (`verifier.py:399-400`).
             Err(_) => continue,
         };
@@ -332,5 +332,19 @@ mod tests {
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
         let err = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap_err();
         assert!(err.is_auth());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn cancellation_aborts_verification() {
+        // A cancelled service yields a cancellation error on every request.
+        // verify_file must propagate it instead of finishing "clean", which
+        // would write unverified output.
+        let driver = ScriptedDriver::new(vec![]);
+        let (tx, _rx) = tokio::sync::mpsc::channel(64);
+        let cancel = CancellationToken::new();
+        let svc = LlmService::new(driver, 2, cancel.clone(), tx);
+        cancel.cancel();
+        let err = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap_err();
+        assert!(err.is_cancelled());
     }
 }
