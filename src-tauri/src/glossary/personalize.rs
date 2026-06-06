@@ -29,10 +29,14 @@ pub async fn personalize_pass(
     let resp = svc.request(req).await.map_err(|e| format!("personalize request failed: {e}"))?;
     let v = parse_response::extract_object(&resp.text)
         .map_err(|e| format!("personalize response unparseable: {e}"))?;
-    let out = Glossary::from_terms_value(&v, &glossary.world_type);
+    let mut out = Glossary::from_terms_value(&v, &glossary.world_type);
     if out.is_empty() {
         return Err("personalize response contained no terms — keeping original".into());
     }
+    // Merge-over: response terms win (they're the personalized versions); any
+    // term the response omitted is retained from the original — a truncated
+    // response must never drop terms (carry-forward fix).
+    out.merge_first_wins(glossary);
     Ok(out)
 }
 
@@ -83,6 +87,30 @@ mod tests {
         // Parses but contains zero terms → would wipe the glossary → Err.
         let d = ScriptedDriver::new(vec![Ok(r#"{"terms":{}}"#.into())]);
         assert!(personalize_pass(&svc(d), &glossary(), "").await.is_err());
+    }
+
+    /// A truncated response must not drop terms it did not mention.
+    /// Response terms win (they're the personalized versions); terms the
+    /// response omitted are carried forward from the original.
+    #[tokio::test(start_paused = true)]
+    async fn truncated_response_keeps_omitted_terms() {
+        // Original: one character + one location.
+        let mut original = Glossary::new("xianxia");
+        original.characters.insert("林动".into(), "Lin Dong".into());
+        original.locations.insert("青阳镇".into(), "Qingyang Town".into());
+
+        // Response: only the character, renamed — location is omitted (truncation).
+        let d = ScriptedDriver::new(vec![Ok(
+            r#"{"characters":{"林动":"Lin Dong (Rock Saint)"}}"#.into(),
+        )]);
+        let out = personalize_pass(&svc(d), &original, "ctx").await.unwrap();
+
+        // (a) Response's rename wins.
+        assert_eq!(out.characters.get("林动").unwrap(), "Lin Dong (Rock Saint)");
+        // (b) Omitted term survives from original.
+        assert_eq!(out.locations.get("青阳镇").unwrap(), "Qingyang Town");
+        // (c) world_type preserved.
+        assert_eq!(out.world_type, "xianxia");
     }
 
     /// Pin the "modern" fallback: a glossary with an empty world_type should
