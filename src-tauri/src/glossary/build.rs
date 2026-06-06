@@ -2,8 +2,8 @@
 //! task; `glossary_batches` is shared with the reference extractor.
 
 /// Slice a cross-file line stream into batches of `limit × 0.7` lines
-/// (`glossary_builder.py:136-138,235-241`). The 30% headroom leaves room for
-/// prompt overhead.
+/// (`glossary_builder.py:136-138,235-241`; `reference_extractor.py:65-67,124-137`).
+/// The 30% headroom leaves room for prompt overhead.
 // consumed by the reference extractor and the build orchestrator (next task)
 #[allow(dead_code)]
 pub fn glossary_batches(lines: &[String], batch_limit: Option<u32>) -> Vec<String> {

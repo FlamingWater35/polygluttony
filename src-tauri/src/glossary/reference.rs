@@ -12,8 +12,8 @@
 //! share a single cache file.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
+use futures::future::join_all;
 use tokio::sync::mpsc;
 
 use serde::{Deserialize, Serialize};
@@ -275,12 +275,13 @@ fn collect_dialogue_lines(files: &[PathBuf]) -> (Vec<String>, u32) {
 
 /// Extract English reference terms from `.ass` files: batch at `limit × 0.7`
 /// lines, parallel via `LlmService` (its retries/AIMD replace Python's
-/// BatchManager), merge sorted by batch index, dedupe. Batch failures are
-/// recorded and skipped — NEVER fatal. Returns (terms, files_processed, errors).
+/// BatchManager), merge sorted by batch index, dedupe. Both LLM failures and
+/// unparseable responses are recorded in `errors` and skipped — NEVER fatal.
+/// Returns (terms, files_processed, errors).
 // consumed by the O11 command (later step-4 task) and load_or_extract below
 #[allow(dead_code)]
 pub async fn extract_from_files(
-    svc: &Arc<LlmService>,
+    svc: &LlmService,
     files: &[PathBuf],
     batch_limit: Option<u32>,
     tx: &mpsc::Sender<GlossaryEvent>,
@@ -297,39 +298,42 @@ pub async fn extract_from_files(
     let total = batches.len() as u32;
     let _ = tx.send(GlossaryEvent::Progress { done: 0, total }).await;
 
-    let mut handles = Vec::new();
-    for batch in batches {
-        let svc = svc.clone();
-        let req = LlmRequest {
-            system: crate::glossary::prompts::REFERENCE_EXTRACT.to_string(),
-            user: crate::glossary::prompts::extraction_user_prompt(&batch),
-        };
-        handles.push(tokio::spawn(async move { svc.request(req).await }));
-    }
+    // Drive all batch futures concurrently; join_all preserves input order so
+    // merge order = batch index order (reference_extractor.py:86). Borrowing
+    // `svc` directly — no Arc clone per task; drop-cancellation is free.
+    let futures: Vec<_> = batches
+        .into_iter()
+        .map(|batch| {
+            let req = LlmRequest {
+                system: crate::glossary::prompts::REFERENCE_EXTRACT.to_string(),
+                user: crate::glossary::prompts::extraction_user_prompt(&batch),
+            };
+            svc.request(req)
+        })
+        .collect();
+    let results = join_all(futures).await;
 
     let mut merged = ReferenceTerminology::default();
     let mut errors = Vec::new();
-    // Awaiting join handles in spawn order = deterministic merge order
-    // (reference_extractor.py:86 sorts by batch index); execution still runs
-    // concurrently under the service's permit limit.
-    for (i, h) in handles.into_iter().enumerate() {
+    for (i, result) in results.into_iter().enumerate() {
         let done = (i + 1) as u32;
-        match h.await {
-            Ok(Ok(resp)) => match parse_response::extract_object(&resp.text) {
+        match result {
+            Ok(resp) => match parse_response::extract_object(&resp.text) {
                 Ok(v) => merged.merge(&ReferenceTerminology::from_value(&v)),
                 Err(e) => {
+                    let msg = format!(
+                        "reference batch {done}/{total}: unparseable response ({e})"
+                    );
                     let _ = tx
                         .send(GlossaryEvent::Log {
                             level: LogLevel::Warning,
-                            message: format!(
-                                "reference batch {done}: unparseable response ({e})"
-                            ),
+                            message: msg.clone(),
                         })
                         .await;
+                    errors.push(msg);
                 }
             },
-            Ok(Err(e)) => errors.push(format!("reference batch {done} failed: {e}")),
-            Err(_) => errors.push(format!("reference batch {done} task panicked")),
+            Err(e) => errors.push(format!("reference batch {done}/{total} failed: {e}")),
         }
         let _ = tx.send(GlossaryEvent::Progress { done, total }).await;
     }
@@ -343,21 +347,39 @@ pub async fn extract_from_files(
 #[allow(dead_code)]
 pub async fn load_or_extract(
     folder: &Path,
-    svc: &Arc<LlmService>,
+    svc: &LlmService,
     batch_limit: Option<u32>,
     tx: &mpsc::Sender<GlossaryEvent>,
 ) -> Option<ReferenceTerminology> {
-    if let Some(t) = load_cache(folder) {
-        let _ = tx
-            .send(GlossaryEvent::Log {
-                level: LogLevel::Info,
-                message: format!(
-                    "loaded {} reference terms from {CACHE_FILENAME}",
-                    t.count()
-                ),
-            })
-            .await;
-        return Some(t);
+    let cache_path = folder.join(CACHE_FILENAME);
+    if cache_path.exists() {
+        match load_cache(folder) {
+            Some(t) => {
+                let _ = tx
+                    .send(GlossaryEvent::Log {
+                        level: LogLevel::Info,
+                        message: format!(
+                            "loaded {} reference terms from {CACHE_FILENAME}",
+                            t.count()
+                        ),
+                    })
+                    .await;
+                return Some(t);
+            }
+            None => {
+                // File exists but is unreadable/corrupt — warn and fall through.
+                // We do NOT delete it (user may want to fix by hand); it will be
+                // overwritten if extraction succeeds.
+                let _ = tx
+                    .send(GlossaryEvent::Log {
+                        level: LogLevel::Warning,
+                        message: format!(
+                            "{CACHE_FILENAME} is unreadable — ignoring; it will be overwritten if extraction succeeds"
+                        ),
+                    })
+                    .await;
+            }
+        }
     }
     let ref_dir = find_ref_dir(folder)?;
     let files = ref_ass_files(&ref_dir);
@@ -523,9 +545,9 @@ mod tests {
     use std::sync::Arc;
     use tokio_util::sync::CancellationToken;
 
-    fn svc(driver: Arc<ScriptedDriver>) -> Arc<LlmService> {
+    fn make_svc(driver: Arc<ScriptedDriver>, cap: u32) -> LlmService {
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
-        Arc::new(LlmService::new(driver, 2, CancellationToken::new(), tx))
+        LlmService::new(driver, cap, CancellationToken::new(), tx)
     }
 
     fn write_ass(dir: &Path, name: &str, lines: &[&str]) -> PathBuf {
@@ -551,7 +573,8 @@ mod tests {
             r#"{"characters":["Lin Dong","lin dong"],"organizations":["Dao Sect"]}"#.into(),
         )]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
-        let (t, files_ok, errors) = extract_from_files(&svc(d), &[f], Some(300), &gtx).await;
+        let svc = make_svc(d, 2);
+        let (t, files_ok, errors) = extract_from_files(&svc, &[f], Some(300), &gtx).await;
         assert!(errors.is_empty());
         assert_eq!(files_ok, 1);
         assert_eq!(t.characters, vec!["Lin Dong"]); // deduped case-insensitively
@@ -562,33 +585,24 @@ mod tests {
     async fn extractor_records_batch_failure_and_continues() {
         let dir = tempfile::tempdir().unwrap();
         // batch limit 2 → ×0.7 → 1 line per batch → 2 batches for 2 lines.
-        // 3 Transport errors are consumed by whichever batch runs first (it
-        // exhausts all 3 LlmService retry attempts). The Ok is consumed by the
-        // batch that runs second. Since spawned tasks may run in either order
-        // under the async runtime, we only assert: exactly 1 error, and the
-        // successful batch's data is present in the merged result.
+        // HTTP 400 is non-retryable and non-auth: exactly one driver call per
+        // batch. Script order = join_all completion order (deterministic: no
+        // spawned tasks, no interleaving).
         let f = write_ass(dir.path(), "e1.ass", &["line one", "line two"]);
         let d = ScriptedDriver::new(vec![
-            // One batch exhausts retries; the other succeeds.
-            Err(crate::llm::error::LlmError::Transport("x".into())),
-            Err(crate::llm::error::LlmError::Transport("x".into())),
-            Err(crate::llm::error::LlmError::Transport("x".into())),
+            Err(crate::llm::error::LlmError::Http { status: 400, body: "bad request".into() }),
             Ok(r#"{"locations":["Qingyang Town"]}"#.into()),
         ]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
-        let svc = {
-            let (tx, _rx) = tokio::sync::mpsc::channel(64);
-            Arc::new(LlmService::new(d, 1, CancellationToken::new(), tx))
-        };
+        let svc = make_svc(d, 1);
         let (t, _files_ok, errors) = extract_from_files(&svc, &[f], Some(2), &gtx).await;
-        // Exactly one batch failed; which one depends on scheduler ordering.
         assert_eq!(errors.len(), 1, "expected 1 error, got: {:?}", errors);
         assert!(
-            errors[0].contains("batch 1") || errors[0].contains("batch 2"),
-            "error must name a batch: got {:?}",
+            errors[0].contains("failed"),
+            "error must say 'failed': got {:?}",
             errors[0]
         );
-        assert_eq!(t.locations, vec!["Qingyang Town"]); // the successful batch landed
+        assert_eq!(t.locations, vec!["Qingyang Town"]);
     }
 
     #[tokio::test(start_paused = true)]
@@ -603,7 +617,8 @@ mod tests {
         // Driver would panic if called (empty script) — cache short-circuits.
         let d = ScriptedDriver::new(vec![]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
-        let t = load_or_extract(dir.path(), &svc(d), Some(300), &gtx).await;
+        let svc = make_svc(d, 2);
+        let t = load_or_extract(dir.path(), &svc, Some(300), &gtx).await;
         assert_eq!(t.unwrap().items, vec!["Stone Talisman"]);
     }
 
@@ -615,7 +630,8 @@ mod tests {
         write_ass(&ref_dir, "e1.ass", &["Lin Dong strikes"]);
         let d = ScriptedDriver::new(vec![Ok(r#"{"characters":["Lin Dong"]}"#.into())]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
-        let t = load_or_extract(dir.path(), &svc(d), Some(300), &gtx).await.unwrap();
+        let svc = make_svc(d, 2);
+        let t = load_or_extract(dir.path(), &svc, Some(300), &gtx).await.unwrap();
         assert_eq!(t.characters, vec!["Lin Dong"]);
         // Cached for next time.
         assert_eq!(load_cache(dir.path()).unwrap().characters, vec!["Lin Dong"]);
@@ -626,6 +642,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let d = ScriptedDriver::new(vec![]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
-        assert!(load_or_extract(dir.path(), &svc(d), Some(300), &gtx).await.is_none());
+        let svc = make_svc(d, 2);
+        assert!(load_or_extract(dir.path(), &svc, Some(300), &gtx).await.is_none());
     }
 }
