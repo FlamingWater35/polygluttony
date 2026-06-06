@@ -87,7 +87,7 @@ impl Glossary {
         }
     }
 
-    fn category_mut(&mut self, name: &str) -> &mut BTreeMap<String, String> {
+    pub(crate) fn category_mut(&mut self, name: &str) -> &mut BTreeMap<String, String> {
         match name {
             "characters" => &mut self.characters,
             "cultivation" => &mut self.cultivation,
