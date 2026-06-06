@@ -22,6 +22,7 @@ export function syncProjectStore(view: ProjectView) {
     dialogueLineCount: view.total_dialogue_lines,
     hasUntranslated: untranslated > 0,
     hasTranslated: view.files.length - untranslated > 0,
+    glossaryTerms: view.glossary_terms,
   });
 }
 
