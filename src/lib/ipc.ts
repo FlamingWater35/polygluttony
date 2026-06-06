@@ -96,7 +96,7 @@ export const ipc = {
     normalize: boolean
     personalize: boolean
     personalizeContext: string
-  }) => invoke<void>("start_glossary_build", { ...args }),
+  }) => invoke<void>("start_glossary_build", args),
   /** Cancel the active glossary op (build / normalize / import). */
   cancelGlossaryBuild: () => invoke<void>("cancel_glossary_build"),
   /** O12 — run normalization; returns a review, NOT saved. */

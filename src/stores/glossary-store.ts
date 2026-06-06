@@ -89,7 +89,10 @@ export const useGlossaryRun = create<GlossaryRunStore>((set) => ({
           return {
             busy: null,
             error: e.message,
-            logs: [...s.logs, { level: "error" as LogLevel, message: e.message }],
+            logs: [
+              ...s.logs.slice(-(MAX_LOG_LINES - 1)),
+              { level: "error" as LogLevel, message: e.message },
+            ],
           }
         case "file_changed":
           return { fileTick: s.fileTick + 1 }
@@ -101,6 +104,6 @@ export const useGlossaryRun = create<GlossaryRunStore>((set) => ({
   reset: () =>
     set({
       busy: null, phase: null, phaseDetail: null, done: 0, total: 0,
-      logs: [], summary: null, error: null,
+      logs: [], summary: null, lastDiff: null, error: null,
     }),
 }))
