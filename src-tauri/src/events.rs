@@ -111,7 +111,7 @@ pub enum RunEvent {
     State { file: String, state: FileStateKind, detail: Option<String> },
     Progress { file: String, translated: u32, total: u32, batch: u32, total_batches: u32, retries: u32 },
     Log { file: Option<String>, level: LogLevel, phase: LogPhase, message: String },
-    FileDone { file: String, has_warnings: bool },
+    FileDone { file: String, has_warnings: bool, issues: Vec<VerifyIssue> },
     Error { file: String, message: String },
     RunFinished { results: Vec<FileResult> },
 }

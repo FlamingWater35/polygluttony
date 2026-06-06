@@ -3,8 +3,9 @@ import type { FileResult } from "./FileResult";
 import type { FileStateKind } from "./FileStateKind";
 import type { LogLevel } from "./LogLevel";
 import type { LogPhase } from "./LogPhase";
+import type { VerifyIssue } from "./VerifyIssue";
 
 /**
  * Everything the UI hears during a run, on `TRANSLATION_EVENT`.
  */
-export type RunEvent = { "kind": "state", file: string, state: FileStateKind, detail: string | null, } | { "kind": "progress", file: string, translated: number, total: number, batch: number, total_batches: number, retries: number, } | { "kind": "log", file: string | null, level: LogLevel, phase: LogPhase, message: string, } | { "kind": "file_done", file: string, has_warnings: boolean, } | { "kind": "error", file: string, message: string, } | { "kind": "run_finished", results: Array<FileResult>, };
+export type RunEvent = { "kind": "state", file: string, state: FileStateKind, detail: string | null, } | { "kind": "progress", file: string, translated: number, total: number, batch: number, total_batches: number, retries: number, } | { "kind": "log", file: string | null, level: LogLevel, phase: LogPhase, message: string, } | { "kind": "file_done", file: string, has_warnings: boolean, issues: Array<VerifyIssue>, } | { "kind": "error", file: string, message: string, } | { "kind": "run_finished", results: Array<FileResult>, };

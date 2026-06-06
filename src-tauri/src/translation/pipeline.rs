@@ -242,7 +242,12 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
         .collect();
     write_translated(&path, &original, &out_lines).map_err(|e| e.to_string())?;
 
-    st.emit(RunEvent::FileDone { file: job.file_name.clone(), has_warnings }).await;
+    st.emit(RunEvent::FileDone {
+        file: job.file_name.clone(),
+        has_warnings,
+        issues: issues.clone(),
+    })
+    .await;
     st.state(
         if has_warnings { FileStateKind::Warning } else { FileStateKind::Done },
         None,
@@ -937,5 +942,32 @@ mod tests {
         .await;
         assert!(!result.success);
         assert!(result.output_path.is_none());
+    }
+
+    #[tokio::test]
+    async fn warning_file_done_carries_issues() {
+        let src = ass_source(&["很长的中文第一句？", "很长的中文第二句？"]);
+        // Empty translations make stage-1 drift fire on every verify attempt with
+        // zero verify LLM calls (same trick as verify.rs::fast_drift_stage_short_circuits),
+        // so the script is: initial batch + one full retranslation per non-final
+        // attempt, all returning empty text.
+        let empty = ok_batch(&[(1, ""), (2, "")]);
+        let mut responses = vec![Ok(empty.clone())];
+        for _ in 1..MAX_RETRANSLATION_ATTEMPTS {
+            responses.push(Ok(empty.clone()));
+        }
+        let (result, events, _, _dir) = run_pipeline(&src, responses).await;
+        assert!(result.success);
+        assert!(result.has_warnings);
+        assert!(!result.issues.is_empty());
+        let done_issues = events
+            .iter()
+            .find_map(|e| match e {
+                RunEvent::FileDone { issues, has_warnings: true, .. } => Some(issues.clone()),
+                _ => None,
+            })
+            .expect("FileDone with warnings");
+        assert_eq!(done_issues.len(), result.issues.len());
+        assert_eq!(done_issues[0].issue_type, "drift");
     }
 }

@@ -4,6 +4,7 @@ import type { FileStateKind } from "@/types/generated/FileStateKind"
 import type { LogLevel } from "@/types/generated/LogLevel"
 import type { LogPhase } from "@/types/generated/LogPhase"
 import type { RunEvent } from "@/types/generated/RunEvent"
+import type { VerifyIssue } from "@/types/generated/VerifyIssue"
 
 const MAX_LOG_LINES = 500
 
@@ -17,6 +18,9 @@ export interface FileRow {
   retries: number
   hasWarnings: boolean | null
   error: string | null
+  issues: VerifyIssue[]
+  /** True once this file entered the verifying phase (drives ✗ placement). */
+  reachedVerify: boolean
 }
 
 export interface LogLine {
@@ -50,6 +54,8 @@ const emptyRow = (): FileRow => ({
   retries: 0,
   hasWarnings: null,
   error: null,
+  issues: [],
+  reachedVerify: false,
 })
 
 export const useTranslationRun = create<TranslationRunState>((set) => ({
@@ -74,7 +80,11 @@ export const useTranslationRun = create<TranslationRunState>((set) => ({
       }
       switch (e.kind) {
         case "state":
-          touch(e.file, { state: e.state, detail: e.detail })
+          touch(e.file, {
+            state: e.state,
+            detail: e.detail,
+            ...(e.state === "verifying" ? { reachedVerify: true } : {}),
+          })
           return { files }
         case "progress":
           touch(e.file, {
@@ -93,7 +103,7 @@ export const useTranslationRun = create<TranslationRunState>((set) => ({
             ],
           }
         case "file_done":
-          touch(e.file, { hasWarnings: e.has_warnings })
+          touch(e.file, { hasWarnings: e.has_warnings, issues: e.issues })
           return { files }
         case "error":
           touch(e.file, { error: e.message, state: "failed" })
