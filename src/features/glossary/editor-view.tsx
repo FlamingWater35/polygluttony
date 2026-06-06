@@ -22,13 +22,13 @@ import { ipc } from "@/lib/ipc";
 import { useAppStore } from "@/stores/app-store";
 import { useGlossaryRun } from "@/stores/glossary-store";
 import { projectKey } from "@/features/project/use-project";
-import { glossaryKey } from "./glossary-page";
+import { glossaryKey, markLocalSave } from "./glossary-page";
 import { DiffReview } from "./diff-review";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-// Category keys — keep in sync with `CATEGORY_KEYS` in src-tauri/src/glossary/model.rs.
+// Category keys — keep in sync with `CATEGORIES` in src-tauri/src/glossary/model.rs.
 const CATEGORIES = [
   "characters",
   "cultivation",
@@ -73,12 +73,14 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
 
   // Build finished while we were elsewhere (or just now) → surface its diff +
   // any non-fatal errors. CreateView owns the built-nothing case.
+  // Guard: only surface results for the folder this run was actually started in.
   useEffect(() => {
     if (!summary || shownSummary === summary) return;
+    if (useGlossaryRun.getState().folder !== view.folder) return;
     shownSummary = summary;
     for (const err of summary.errors) toast.warning(err);
     if (summary.diff.has_changes) setInfoDiff(summary.diff);
-  }, [summary]);
+  }, [summary, view.folder]);
 
   // ── auto-save (O14): every mutation persists the whole doc ──────────────────
 
@@ -91,6 +93,9 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
     qc.setQueryData<ProjectView>(projectKey(view.folder), (v) =>
       v ? { ...v, glossary_terms: next.count } : v,
     );
+    // Mark the save timestamp before the async write so the file-watcher
+    // suppression window (I3) starts immediately.
+    markLocalSave();
     ipc.saveGlossary(view.folder, next).catch((e: unknown) => toast.error(String(e)));
   };
 
@@ -119,7 +124,7 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
     const translation = addTgt.trim();
     if (!source || !translation) return;
     // Backend merge semantics: a source must be unique across ALL categories.
-    if (CATEGORIES.some((c) => source in (doc.terms[c] ?? {}))) {
+    if (CATEGORIES.some((c) => Object.prototype.hasOwnProperty.call(doc.terms[c] ?? {}, source))) {
       toast.error(`"${source}" is already in the glossary`);
       return;
     }
@@ -231,6 +236,7 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
           <div className="flex-1" />
           <select
             aria-label="Category"
+            disabled={busy !== null}
             className={SELECT_CLS}
             value={addCat}
             onChange={(e) => setAddCat(e.target.value as Category)}
@@ -243,12 +249,14 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
           </select>
           <Input
             value={addSrc}
+            disabled={busy !== null}
             onChange={(e) => setAddSrc(e.target.value)}
             placeholder="Source term"
             className="w-40"
           />
           <Input
             value={addTgt}
+            disabled={busy !== null}
             onChange={(e) => setAddTgt(e.target.value)}
             placeholder="Translation"
             className="w-40"
@@ -256,7 +264,7 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
               if (e.key === "Enter") addTerm();
             }}
           />
-          <Button variant="secondary" onClick={addTerm}>
+          <Button variant="secondary" disabled={busy !== null} onClick={addTerm}>
             <Plus className="size-4" /> Add term
           </Button>
         </div>
@@ -280,7 +288,7 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
                   <div
                     key={source}
                     className="group flex items-center gap-2 rounded-md px-2 py-1 hover:bg-[color:var(--card)]"
-                    onDoubleClick={() => setEditing({ cat, source })}
+                    onDoubleClick={() => { if (!busy) setEditing({ cat, source }); }}
                   >
                     <span className="min-w-0 flex-1 truncate text-[12.5px] text-foreground">
                       {source}
@@ -300,7 +308,8 @@ export function EditorView({ view, doc }: { view: ProjectView; doc: GlossaryDoc 
                     <button
                       type="button"
                       aria-label={`Delete ${source}`}
-                      className="invisible shrink-0 text-muted-foreground transition-colors group-hover:visible hover:text-[color:var(--color-danger)]"
+                      disabled={busy !== null}
+                      className="invisible shrink-0 text-muted-foreground transition-colors group-hover:visible hover:text-[color:var(--color-danger)] disabled:pointer-events-none disabled:opacity-40"
                       onClick={() => persist(withoutTerm(cat, source))}
                     >
                       <X className="size-3.5" />

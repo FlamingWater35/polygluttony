@@ -13,6 +13,16 @@ export function glossaryKey(folder: string) {
   return ["glossary", folder] as const;
 }
 
+// I3 — self-save suppression: every persist() renames the file which fires
+// FileChanged → fileTick → invalidate. That invalidation can resolve after a
+// newer optimistic setQueryData and silently revert the edit. We suppress the
+// invalidation for 1500 ms after an in-app save. External edits (OS editor)
+// cannot coincide with active in-app editing, so this is an accepted blind spot.
+let lastLocalSaveAt = 0;
+export function markLocalSave() {
+  lastLocalSaveAt = Date.now();
+}
+
 export function GlossaryPage() {
   const workdir = useAppStore((s) => s.workdir);
   const qc = useQueryClient();
@@ -44,8 +54,12 @@ export function GlossaryPage() {
   }, [workdir]);
 
   // Build completion / external edits → refetch the glossary.
+  // Self-save suppression (I3): skip if the tick was caused by our own persist()
+  // rename — the optimistic setQueryData is already up to date.
   useEffect(() => {
-    if (workdir && fileTick > 0) void qc.invalidateQueries({ queryKey: glossaryKey(workdir) });
+    if (!workdir || fileTick === 0) return;
+    if (Date.now() - lastLocalSaveAt < 1500) return;
+    void qc.invalidateQueries({ queryKey: glossaryKey(workdir) });
   }, [fileTick, workdir, qc]);
 
   if (!workdir) return <EmptyState title="Glossary" description="Open a folder first." />;

@@ -66,7 +66,7 @@ export function DiffReview({
                       className="grid grid-cols-[1fr_auto_1fr] gap-2 py-0.5 text-[12.5px]"
                     >
                       <span className="truncate">{t.source}</span>
-                      <span className={STATUS_CLS[t.status]}>
+                      <span className={`${STATUS_CLS[t.status]} min-w-0 truncate`}>
                         {t.status === "modified" ? `${t.old} →` : t.status}
                       </span>
                       <span className="truncate">{t.new ?? t.old}</span>
