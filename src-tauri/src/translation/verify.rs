@@ -29,6 +29,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::events::VerifyIssue;
+use crate::llm::error::LlmError;
 use crate::llm::service::LlmService;
 use crate::llm::LlmRequest;
 use crate::translation::{parse_response, prompts};
@@ -53,7 +54,7 @@ pub async fn verify_file(
     svc: &LlmService,
     lines: &BTreeMap<u32, (String, String)>,
     glossary_terms: &BTreeMap<String, String>,
-) -> VerifyReport {
+) -> Result<VerifyReport, LlmError> {
     let pairs: Vec<LinePair> = lines
         .iter()
         .map(|(id, (s, t))| LinePair { id: *id, src: s.clone(), tgt: t.clone() })
@@ -64,7 +65,7 @@ pub async fn verify_file(
     if d.has_suspected_drift {
         let start = d.suspected_drift_start_id.unwrap_or(1);
         let (src, tgt) = lines.get(&start).cloned().unwrap_or_default();
-        return VerifyReport {
+        return Ok(VerifyReport {
             issues: vec![VerifyIssue {
                 line_id: start,
                 source: src,
@@ -75,7 +76,7 @@ pub async fn verify_file(
             }],
             sampled_line_ids: Vec::new(),
             failed_line_ids: d.flagged_line_ids.into_iter().collect(),
-        };
+        });
     }
 
     // Stage 2: LLM sampling.
@@ -93,8 +94,14 @@ pub async fn verify_file(
             system: prompts::VERIFY.to_string(),
             user: serde_json::to_string(&payload).expect("serializable"),
         };
-        let Ok(resp) = svc.request(req).await else {
-            continue; // verifier degrades gracefully (`verifier.py:399-400`)
+        let resp = match svc.request(req).await {
+            Ok(r) => r,
+            // Auth death must NOT degrade gracefully — a dead key between
+            // translate and verify would otherwise report "clean without
+            // verification" (carry-forward fix).
+            Err(e) if e.is_auth() => return Err(e),
+            // Other failures keep degrading gracefully (`verifier.py:399-400`).
+            Err(_) => continue,
         };
         // `{"issues":[{id,reason}]}` is the expected shape; on parse failure
         // try a bare array `[{id,reason},...]` (the model may truncate the
@@ -125,7 +132,7 @@ pub async fn verify_file(
         }
     }
 
-    VerifyReport { issues, sampled_line_ids, failed_line_ids: failed }
+    Ok(VerifyReport { issues, sampled_line_ids, failed_line_ids: failed })
 }
 
 /// Sampling: thirds by sorted id; 50% per region clamped [5, 80]; priority
@@ -273,7 +280,7 @@ mod tests {
         let driver = ScriptedDriver::new(vec![]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver.clone(), 2, CancellationToken::new(), tx);
-        let r = verify_file(&svc, &p, &BTreeMap::new()).await;
+        let r = verify_file(&svc, &p, &BTreeMap::new()).await.unwrap();
         assert!(!r.issues.is_empty());
         assert_eq!(r.issues[0].issue_type, "drift");
         assert_eq!(driver.call_count(), 0); // stage 2 skipped
@@ -285,7 +292,7 @@ mod tests {
             ScriptedDriver::new(vec![Ok(r#"{"issues":[{"id":3,"reason":"unrelated"}]}"#.into())]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
-        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await;
+        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap();
         assert_eq!(r.failed_line_ids, [3].into());
         assert_eq!(r.issues.len(), 1);
         assert_eq!(r.issues[0].line_id, 3);
@@ -297,7 +304,7 @@ mod tests {
             ScriptedDriver::new(vec![Ok(r#"[{"id":3,"reason":"unrelated"}]"#.into())]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
-        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await;
+        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap();
         assert_eq!(r.failed_line_ids, [3].into());
     }
 
@@ -310,7 +317,20 @@ mod tests {
         ]);
         let (tx, _rx) = tokio::sync::mpsc::channel(64);
         let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
-        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await;
+        let r = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap();
         assert!(r.issues.is_empty()); // verifier degrades gracefully
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn auth_error_aborts_verification() {
+        let driver = ScriptedDriver::new(vec![Err(crate::llm::error::LlmError::Http {
+            status: 401,
+            body: "no".into(),
+            retry_after: None,
+        })]);
+        let (tx, _rx) = tokio::sync::mpsc::channel(64);
+        let svc = LlmService::new(driver, 2, CancellationToken::new(), tx);
+        let err = verify_file(&svc, &pairs(12), &BTreeMap::new()).await.unwrap_err();
+        assert!(err.is_auth());
     }
 }

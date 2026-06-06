@@ -142,7 +142,15 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
         }
         st.state(FileStateKind::Verifying, None).await;
         let stripped = st.stripped_pairs();
-        let report = verify_file(job.svc, &stripped, &job.glossary.all_terms()).await;
+        let report = match verify_file(job.svc, &stripped, &job.glossary.all_terms()).await {
+            Ok(r) => r,
+            Err(e) => {
+                // Dead key mid-verify: fail the file and doom the run, mirroring
+                // translation's Fatal handling (pipeline.rs BatchOutcome::Fatal).
+                job.cancel.cancel();
+                return Err(format!("verification aborted: {e}"));
+            }
+        };
         if report.issues.is_empty() {
             break; // clean
         }
@@ -849,6 +857,29 @@ mod tests {
             result.translated_lines, 12,
             "prior translations must survive a total-outage redo"
         );
+    }
+
+    #[tokio::test]
+    async fn dead_key_during_verify_fails_file_not_silent_clean() {
+        let src = ass_source(&["你好", "再见"]);
+        let (result, events, _, _dir) = run_pipeline(
+            &src,
+            vec![
+                Ok(ok_batch(&[(1, "Hello there friend"), (2, "Goodbye for now")])),
+                Err(crate::llm::error::LlmError::Http {
+                    status: 401,
+                    body: "dead key".into(),
+                    retry_after: None,
+                }),
+            ],
+        )
+        .await;
+        assert!(!result.success);
+        assert!(result.output_path.is_none());
+        assert!(events.iter().any(|e| matches!(
+            e,
+            RunEvent::Error { message, .. } if message.contains("verification aborted")
+        )));
     }
 
     #[tokio::test]
