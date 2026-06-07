@@ -116,6 +116,9 @@ pub async fn import_reference_files(
     let cfg = config_store::load(&app)?;
     let conn =
         crate::translation::run::usable_connection(&cfg).ok_or(AppError::NoActiveConnection)?;
+    if let Some(msg) = conn.thinking_config_error() {
+        return Err(AppError::Other(msg));
+    }
     let reference_template = crate::prompts::resolve(
         crate::prompts::PromptId::ReferenceExtract,
         &crate::prompts::overrides_dir(&app)?,
