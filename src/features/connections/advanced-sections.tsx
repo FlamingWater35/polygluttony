@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps } from "react";
 import { useId } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { Connection } from "@/types/generated/Connection";
@@ -47,28 +47,15 @@ export function AdvField({
   );
 }
 
-/** Endpoint + throughput fields. Flat grids with a hairline divider. */
-export function AdvancedSettingsSection({
-  form,
-  footer,
-}: {
-  form: UseFormReturn<Connection>;
-  footer?: ReactNode;
-}) {
+/** Timeout + throughput fields. Flat grids with a hairline divider. */
+export function AdvancedSettingsSection({ form }: { form: UseFormReturn<Connection> }) {
   const { register } = form;
   return (
     <SectionHelp
       title="Advanced settings"
-      hint="(address, tokens, parallelism, timeouts)"
+      hint="(tokens, parallelism, timeouts)"
     >
       <div className="grid grid-cols-2 gap-2 text-[11px]">
-        <div className="col-span-2">
-          <AdvField
-            label="Base URL"
-            help="Where requests are sent. Only change for proxies or alternative providers."
-            {...register("base_url")}
-          />
-        </div>
         <AdvField
           label="Timeout (s)"
           type="number"
@@ -103,7 +90,6 @@ export function AdvancedSettingsSection({
           {...register("concurrency", { valueAsNumber: true })}
         />
       </div>
-      {footer}
     </SectionHelp>
   );
 }

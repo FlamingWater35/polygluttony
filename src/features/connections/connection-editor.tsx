@@ -219,6 +219,25 @@ export function ConnectionEditor({
         </SetupField>
 
         <SetupField
+          label="Base URL"
+          help={
+            <>
+              <HelpText>
+                Where requests are sent — filled in by the provider preset.
+                Change it for proxies or alternative providers.
+              </HelpText>
+              {isCustom ? (
+                <HelpText>
+                  API format auto-detected on Test (currently: {current.driver}).
+                </HelpText>
+              ) : null}
+            </>
+          }
+        >
+          <Input placeholder="https://…" {...register("base_url")} />
+        </SetupField>
+
+        <SetupField
           label="API key"
           help={
             <HelpText>
@@ -322,16 +341,7 @@ export function ConnectionEditor({
           </p>
         )}
 
-        <AdvancedSettingsSection
-          form={form}
-          footer={
-            isCustom ? (
-              <HelpText>
-                API format auto-detected on Test (currently: {current.driver}).
-              </HelpText>
-            ) : null
-          }
-        />
+        <AdvancedSettingsSection form={form} />
         <ExtendedThinkingSection form={form} />
       </div>
 
