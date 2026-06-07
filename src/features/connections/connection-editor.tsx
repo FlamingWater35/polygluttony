@@ -24,8 +24,9 @@ const EMPTY: Connection = {
   concurrency: 5,
   thinking_enabled: null,
   thinking_budget: null,
-  web_search: null,
+  thinking_glossary_budget: null,
   thinking_glossary_norm_budget: null,
+  web_search: null,
 } as unknown as Connection;
 
 /**
