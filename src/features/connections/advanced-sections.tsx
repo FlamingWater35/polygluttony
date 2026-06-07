@@ -118,12 +118,12 @@ export const BUDGET_FIELDS = [
 type BudgetField = (typeof BUDGET_FIELDS)[number];
 
 /** Numeric value or null — react-hook-form's valueAsNumber yields NaN for an empty input. */
-export function numOrNull(v: unknown): number | null {
+function numOrNull(v: unknown): number | null {
   return typeof v === "number" && !Number.isNaN(v) ? v : null;
 }
 
 /** First-enable seed: a quarter of Max tokens, floored at the API minimum. */
-export function seedBudget(maxTokens: number | null): number {
+function seedBudget(maxTokens: number | null): number {
   return Math.max(MIN_BUDGET, Math.floor((maxTokens ?? 16000) / 4));
 }
 

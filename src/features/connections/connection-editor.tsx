@@ -150,6 +150,10 @@ export function ConnectionEditor({
   return (
     <form
       className="flex flex-1 flex-col"
+      // Native HTML validation (min/step on the budget inputs) would block
+      // submit with a browser bubble before react-hook-form runs, shadowing
+      // our styled error messages — the attributes stay as spinner affordances.
+      noValidate
       onSubmit={handleSubmit(async (c) => {
         clearErrors("root");
         const finalName = connName.trim();
@@ -313,7 +317,8 @@ export function ConnectionEditor({
           </HelpText>
         ) : (
           <p className="mb-2 text-[11px] text-[color:var(--color-alert)]">
-            ⚠ Not supported by this provider — available on OpenAI connections.
+            ⚠ Not supported by this provider — available on OpenAI (Responses
+            API) connections.
           </p>
         )}
 
