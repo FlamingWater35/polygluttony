@@ -85,9 +85,14 @@ impl Connection {
     /// `Some(message)` when thinking is enabled but no budget is set — the
     /// Anthropic API rejects `thinking` without `budget_tokens`, so runs must
     /// fail fast with a clear message instead of a cryptic provider 400.
+    /// Only the Anthropic driver reads the thinking fields; other drivers
+    /// ignore them, so stale values on a switched connection are harmless.
     /// (Stage budgets fall back to `thinking_budget`, so only it is checked.)
     pub fn thinking_config_error(&self) -> Option<String> {
-        if self.thinking_enabled.unwrap_or(false) && self.thinking_budget.is_none() {
+        if self.driver == Driver::Anthropic
+            && self.thinking_enabled.unwrap_or(false)
+            && self.thinking_budget.is_none()
+        {
             return Some(
                 "thinking is enabled but no thinking budget is set — edit the connection"
                     .to_string(),
@@ -158,6 +163,13 @@ mod tests {
         assert_eq!(c.thinking_config_error(), None);
         c.thinking_enabled = None;
         assert_eq!(c.thinking_config_error(), None);
+
+        // Other drivers ignore the thinking fields entirely — stale values on
+        // a connection whose provider was switched must not block runs.
+        let mut other = thinking_conn();
+        other.driver = Driver::Openai;
+        other.thinking_budget = None;
+        assert_eq!(other.thinking_config_error(), None);
     }
 
     #[test]

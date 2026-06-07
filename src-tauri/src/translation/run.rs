@@ -84,6 +84,9 @@ pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
 
     let cfg = config_store::load(&app)?;
     let conn = usable_connection(&cfg).ok_or(AppError::NoActiveConnection)?;
+    if let Some(msg) = conn.thinking_config_error() {
+        return Err(AppError::Other(msg));
+    }
 
     if args.files.is_empty() {
         return Err(AppError::Other("no files selected".into()));

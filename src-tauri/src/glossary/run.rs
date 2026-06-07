@@ -159,6 +159,9 @@ pub async fn start(app: AppHandle, args: StartArgs) -> AppResult<()> {
     let cfg = config_store::load(&app)?;
     let conn =
         crate::translation::run::usable_connection(&cfg).ok_or(AppError::NoActiveConnection)?;
+    if let Some(msg) = conn.thinking_config_error() {
+        return Err(AppError::Other(msg));
+    }
 
     let prompt_pack =
         crate::prompts::GlossaryPrompts::resolve(&crate::prompts::overrides_dir(&app)?)?;

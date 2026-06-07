@@ -82,6 +82,9 @@ pub async fn normalize_glossary(app: AppHandle, folder: String) -> AppResult<Nor
     let cfg = config_store::load(&app)?;
     let conn =
         crate::translation::run::usable_connection(&cfg).ok_or(AppError::NoActiveConnection)?;
+    if let Some(msg) = conn.thinking_config_error() {
+        return Err(AppError::Other(msg));
+    }
     let templates =
         crate::prompts::GlossaryPrompts::resolve_normalize(&crate::prompts::overrides_dir(&app)?)?;
     let cancel = run::claim_slot(&app, GlossaryOpKind::Normalize).await?;
