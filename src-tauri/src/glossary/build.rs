@@ -752,4 +752,72 @@ mod tests {
         assert!(s.errors[0].contains("personalize"));
         assert_eq!(s.terms_final, 1); // glossary intact
     }
+
+    /// Normalization must run on `norm_svc`, NOT the extraction service —
+    /// the two params are adjacent and identically typed, so a transposition
+    /// would otherwise be invisible to every same-service test.
+    #[tokio::test(start_paused = true)]
+    async fn normalize_pass_runs_on_the_norm_service() {
+        let dir = tempfile::tempdir().unwrap();
+        write_ass(dir.path(), "e1.ass", &["一"]); // 1 line → 1 extraction batch
+
+        let cancel = CancellationToken::new();
+
+        // Driver A: scripted for extraction only — returns one term.
+        let extract_driver = ScriptedDriver::new(vec![Ok(
+            r#"{"characters":{"林动":"lin dong"}}"#.into(),
+        )]);
+
+        // Driver B: scripted for normalization only — returns the corrected casing.
+        let norm_driver = ScriptedDriver::new(vec![Ok(r#"{"林动":"Lin Dong"}"#.into())]);
+
+        let extract_svc = svc1(extract_driver.clone(), cancel.clone());
+        let norm_svc = svc1(norm_driver.clone(), CancellationToken::new());
+
+        let mut j = job(dir.path(), vec!["e1.ass".into()], cancel);
+        j.normalize = true;
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(256);
+        build_glossary(j, &extract_svc, &norm_svc, None, tx).await;
+
+        let mut events = Vec::new();
+        while let Ok(ev) = rx.try_recv() {
+            events.push(ev);
+        }
+        let summary = events
+            .iter()
+            .rev()
+            .find_map(|e| match e {
+                GlossaryEvent::Done { summary } => Some(summary.clone()),
+                _ => None,
+            })
+            .expect("build must emit Done");
+
+        // Extraction driver A received exactly the extraction call(s).
+        assert_eq!(extract_driver.call_count(), 1, "extraction driver must have been called once");
+        let extract_req = extract_driver.last_request().expect("extraction driver must have a recorded request");
+        // The extraction system prompt starts with "You are a terminology extractor"
+        // (from glossary.txt), NOT the normalize prompt.
+        assert!(
+            extract_req.system.contains("terminology extractor"),
+            "extraction driver must have received the extraction prompt, got: {:?}",
+            &extract_req.system[..extract_req.system.len().min(120)]
+        );
+
+        // Normalization driver B received exactly the normalize call(s).
+        assert!(norm_driver.call_count() >= 1, "norm driver must have been called at least once");
+        let norm_req = norm_driver.last_request().expect("norm driver must have a recorded request");
+        // The normalize system prompt starts with "You are normalizing"
+        // (from glossary-normalize-characters.txt), NOT the extraction prompt.
+        assert!(
+            norm_req.system.contains("normalizing"),
+            "norm driver must have received the normalize prompt, got: {:?}",
+            &norm_req.system[..norm_req.system.len().min(120)]
+        );
+
+        // The final glossary reflects the normalized value from driver B.
+        assert!(summary.normalized, "build must report normalized=true");
+        let saved = load_folder_glossary(dir.path()).unwrap();
+        assert_eq!(saved.characters.get("林动").unwrap(), "Lin Dong");
+    }
 }
