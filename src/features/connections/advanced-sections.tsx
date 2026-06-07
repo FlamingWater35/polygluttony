@@ -1,9 +1,11 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { useId } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { Connection } from "@/types/generated/Connection";
 import { Input } from "@/components/ui/input";
 import { HelpText } from "@/components/help-text";
 import { SectionHelp } from "@/components/section-help";
+import { cn } from "@/lib/utils";
 
 /** Labelled input with help text and optional error/warning lines. */
 export function AdvField({
@@ -11,23 +13,36 @@ export function AdvField({
   help,
   error,
   warn,
+  className,
   ...rest
 }: {
   label: string;
   help: string;
   error?: string;
   warn?: string;
-} & InputHTMLAttributes<HTMLInputElement>) {
+} & ComponentProps<"input">) {
+  const id = useId();
+  const descId = `${id}-desc`;
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-muted-foreground">{label}</span>
-      <Input className="h-8" {...rest} />
-      {error ? (
-        <span className="text-[10.5px] text-[color:var(--color-danger)]">{error}</span>
-      ) : null}
-      <HelpText>{help}</HelpText>
-      {warn ? <span className="text-[10.5px] text-amber-600">⚠ {warn}</span> : null}
-    </label>
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="text-muted-foreground">{label}</label>
+      <Input
+        id={id}
+        className={cn("h-8", className)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={descId}
+        {...rest}
+      />
+      <div id={descId}>
+        {error ? (
+          <span className="text-[10.5px] text-[color:var(--color-danger)]">{error}</span>
+        ) : null}
+        <HelpText>{help}</HelpText>
+        {warn ? (
+          <span className="text-[10.5px] text-[color:var(--color-alert)]">⚠ {warn}</span>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
