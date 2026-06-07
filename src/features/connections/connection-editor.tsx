@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SetupField } from "@/components/setup-field";
 import { HelpText } from "@/components/help-text";
-import { SectionHelp } from "@/components/section-help";
 import { ModelCombobox } from "./model-combobox";
+import { AdvancedSettingsSection } from "./advanced-sections";
 
 const EMPTY: Connection = {
   driver: "openai",
@@ -67,8 +67,8 @@ export function ConnectionEditor({
   onTest: (c: Connection, detect: boolean) => Promise<TestResult>;
   onListModels: (c: Connection, detect: boolean) => Promise<string[]>;
 }) {
-  const { register, handleSubmit, watch, setValue, reset, formState } =
-    useForm<Connection>({ defaultValues: initial ?? EMPTY });
+  const form = useForm<Connection>({ defaultValues: initial ?? EMPTY });
+  const { register, handleSubmit, watch, setValue, reset, formState } = form;
   useEffect(() => {
     reset(initial ?? EMPTY);
     setPresetKey(initial ? matchPresetKey(initial, presets) : "");
@@ -264,44 +264,16 @@ export function ConnectionEditor({
           The web-lookup step needs a model that can search the web (e.g. OpenAI/Gemini).
         </HelpText>
 
-        <SectionHelp
-          title="Advanced settings"
-          hint="(address, tokens, parallelism, timeouts, thinking, web search)"
-        >
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <Field label="Base URL" {...register("base_url")} />
-            <Field
-              label="Max tokens"
-              type="number"
-              {...register("max_tokens", { valueAsNumber: true })}
-            />
-            <Field
-              label="Batch dialogue limit"
-              type="number"
-              {...register("batch_dialogue_limit", { valueAsNumber: true })}
-            />
-            <Field
-              label="Concurrency"
-              type="number"
-              {...register("concurrency", { valueAsNumber: true })}
-            />
-            <Field
-              label="Timeout (s)"
-              type="number"
-              {...register("timeout", { valueAsNumber: true })}
-            />
-            <Field
-              label="Connect timeout (s)"
-              type="number"
-              {...register("connect_timeout", { valueAsNumber: true })}
-            />
-          </div>
-          {isCustom ? (
-            <HelpText>
-              API format auto-detected on Test (currently: {current.driver}).
-            </HelpText>
-          ) : null}
-        </SectionHelp>
+        <AdvancedSettingsSection
+          form={form}
+          footer={
+            isCustom ? (
+              <HelpText>
+                API format auto-detected on Test (currently: {current.driver}).
+              </HelpText>
+            ) : null
+          }
+        />
       </div>
 
       <div className="flex items-center gap-2 border-t border-border bg-[color:var(--popover)] px-4 py-3">
@@ -328,17 +300,5 @@ export function ConnectionEditor({
         </Button>
       </div>
     </form>
-  );
-}
-
-function Field({
-  label,
-  ...rest
-}: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-muted-foreground">{label}</span>
-      <Input className="h-8" {...rest} />
-    </label>
   );
 }
