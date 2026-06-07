@@ -136,7 +136,7 @@ impl LlmDriver for AnthropicDriver {
 mod tests {
     use super::*;
     use crate::config::Driver;
-    use wiremock::matchers::{header, method, path};
+    use wiremock::matchers::{body_partial_json, header, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     fn conn(base: &str) -> Connection {
@@ -145,8 +145,8 @@ mod tests {
             model: "claude-x".into(), max_tokens: Some(16), batch_dialogue_limit: None,
             timeout: Some(10), connect_timeout: None, concurrency: None,
             thinking_enabled: Some(false), thinking_budget: None,
-            thinking_glossary_budget: None, web_search: None,
-            thinking_glossary_norm_budget: None,
+            thinking_glossary_budget: None, thinking_glossary_norm_budget: None,
+            web_search: None,
         }
     }
 
@@ -257,6 +257,29 @@ mod tests {
         assert!(err.is_retryable(), "provider stream error should be retryable, got: {err:?}");
         let msg = err.to_string();
         assert!(msg.contains("provider stream error"), "unexpected message: {msg}");
+    }
+
+    /// A stage clone's budget must land in the request's thinking block.
+    /// (wiremock returns 404 on an unmatched body, failing the test.)
+    #[tokio::test]
+    async fn stage_clone_budget_lands_in_request_body() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/v1/messages"))
+            .and(body_partial_json(serde_json::json!({
+                "thinking": {"type": "enabled", "budget_tokens": 24000}
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "content": [{"type":"text","text":"OK"}]
+            })))
+            .mount(&server)
+            .await;
+        let mut c = conn(&server.uri());
+        c.thinking_enabled = Some(true);
+        c.thinking_budget = Some(6000);
+        c.thinking_glossary_norm_budget = Some(24000);
+        let d = AnthropicDriver::new(c.for_glossary_norm());
+        assert_eq!(d.complete("sys", "ping").await.unwrap(), "OK");
     }
 
     /// A stream that closes without `message_stop` must return Err.
