@@ -141,7 +141,7 @@ pub async fn build_glossary(
 
     // ── Reference: advisory English terminology (O11, logs for itself) ─────
     phase(&tx, GlossaryPhase::Reference, None).await;
-    let reference_terms =
+    let (reference_terms, reference_errors) =
         reference::load_or_extract(&job.folder, svc, job.batch_limit, &tx, &job.prompts.reference)
             .await;
 
@@ -189,7 +189,10 @@ pub async fn build_glossary(
 
     let glossary_path = job.folder.join("glossary.json");
     let mut new_terms = Glossary::new(&job.world_type);
-    let mut errors: Vec<String> = Vec::new();
+    let mut errors: Vec<String> = reference_errors
+        .into_iter()
+        .map(|e| format!("reference terminology: {e}"))
+        .collect();
     let mut terms_extracted = 0u32;
     let mut batches_processed = 0u32;
     let mut aborted = false;
@@ -676,6 +679,41 @@ mod tests {
             .collect();
         dones.sort_unstable();
         assert_eq!(dones, vec![0, 1, 2, 3]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn reference_errors_land_prefixed_in_done_summary() {
+        // ref/ dir → reference extraction fires BEFORE the glossary batch.
+        // Driver cap=1 → requests are serialized in submission order:
+        //   call 1: reference batch → unparseable → records an error
+        //   call 2: glossary batch  → ok → 1 term
+        let dir = tempfile::tempdir().unwrap();
+        let ref_dir = dir.path().join("ref");
+        std::fs::create_dir(&ref_dir).unwrap();
+        write_ass(&ref_dir, "r1.ass", &["Lin Dong strikes"]); // 1 reference batch
+        write_ass(dir.path(), "e1.ass", &["一"]); // 1 extraction batch
+        let cancel = CancellationToken::new();
+        let d = ScriptedDriver::new(vec![
+            Ok("not json at all".into()), // reference batch → unparseable → error
+            Ok(r#"{"characters":{"林动":"Lin Dong"}}"#.into()), // glossary batch ok
+        ]);
+        let svc = svc1(d, cancel.clone());
+        let (_events, s) =
+            run_and_collect(job(dir.path(), vec!["e1.ass".into()], cancel), &svc, None).await;
+
+        assert_eq!(s.errors.len(), 1, "expected 1 error in summary: {:?}", s.errors);
+        assert!(
+            s.errors[0].starts_with("reference terminology: "),
+            "error must be prefixed 'reference terminology: ': {:?}",
+            s.errors[0]
+        );
+        assert!(
+            s.errors[0].contains("unparseable"),
+            "error must mention 'unparseable': {:?}",
+            s.errors[0]
+        );
+        assert_eq!(s.terms_final, 1, "the glossary build itself must be unaffected");
+        assert!(!s.aborted && !s.cancelled);
     }
 
     #[tokio::test(start_paused = true)]

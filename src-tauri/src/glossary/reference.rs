@@ -327,13 +327,18 @@ pub async fn extract_from_files(
 
 /// O11 auto path (`glossary_phase.py:122-182`): cached file → use; else ref/
 /// dir with `.ass` files → extract + cache; else None.
+///
+/// The second tuple field carries extraction errors (from unparseable or failed
+/// LLM batches) so the build orchestrator can surface them in its Done summary.
+/// Cache-corrupt and cache-save problems stay log-only (recoverable; no
+/// extracted data is lost).
 pub async fn load_or_extract(
     folder: &Path,
     svc: &LlmService,
     batch_limit: Option<u32>,
     tx: &mpsc::Sender<GlossaryEvent>,
     template: &str,
-) -> Option<ReferenceTerminology> {
+) -> (Option<ReferenceTerminology>, Vec<String>) {
     let cache_path = folder.join(CACHE_FILENAME);
     if cache_path.exists() {
         match load_cache(folder) {
@@ -347,7 +352,7 @@ pub async fn load_or_extract(
                         ),
                     })
                     .await;
-                return Some(t);
+                return (Some(t), Vec::new());
             }
             None => {
                 // File exists but is unreadable/corrupt — warn and fall through.
@@ -364,10 +369,12 @@ pub async fn load_or_extract(
             }
         }
     }
-    let ref_dir = find_ref_dir(folder)?;
+    let Some(ref_dir) = find_ref_dir(folder) else {
+        return (None, Vec::new());
+    };
     let files = ref_ass_files(&ref_dir);
     if files.is_empty() {
-        return None;
+        return (None, Vec::new());
     }
     let _ = tx
         .send(GlossaryEvent::Log {
@@ -379,13 +386,16 @@ pub async fn load_or_extract(
         })
         .await;
     let (t, _files_ok, errors) = extract_from_files(svc, &files, batch_limit, tx, template).await;
-    for e in errors {
+    // Emit per-error Warning logs (real-time visibility) while preserving the
+    // error list for the caller to include in the build summary.
+    for e in &errors {
         let _ = tx
-            .send(GlossaryEvent::Log { level: LogLevel::Warning, message: e })
+            .send(GlossaryEvent::Log { level: LogLevel::Warning, message: e.clone() })
             .await;
     }
     if t.count() > 0 {
         if let Err(e) = save_cache(folder, &t) {
+            // Cache-save failure is log-only: we still return the extracted terms.
             let _ = tx
                 .send(GlossaryEvent::Log {
                     level: LogLevel::Warning,
@@ -393,9 +403,9 @@ pub async fn load_or_extract(
                 })
                 .await;
         }
-        return Some(t);
+        return (Some(t), errors);
     }
-    None
+    (None, errors)
 }
 
 #[cfg(test)]
@@ -648,8 +658,9 @@ mod tests {
         let d = ScriptedDriver::new(vec![]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
         let svc = make_svc(d, 2);
-        let t = load_or_extract(dir.path(), &svc, Some(300), &gtx, ref_tpl()).await;
+        let (t, errors) = load_or_extract(dir.path(), &svc, Some(300), &gtx, ref_tpl()).await;
         assert_eq!(t.unwrap().items, vec!["Stone Talisman"]);
+        assert!(errors.is_empty());
     }
 
     #[tokio::test(start_paused = true)]
@@ -661,8 +672,10 @@ mod tests {
         let d = ScriptedDriver::new(vec![Ok(r#"{"characters":["Lin Dong"]}"#.into())]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
         let svc = make_svc(d, 2);
-        let t = load_or_extract(dir.path(), &svc, Some(300), &gtx, ref_tpl()).await.unwrap();
+        let (t, errors) = load_or_extract(dir.path(), &svc, Some(300), &gtx, ref_tpl()).await;
+        let t = t.unwrap();
         assert_eq!(t.characters, vec!["Lin Dong"]);
+        assert!(errors.is_empty());
         // Cached for next time.
         assert_eq!(load_cache(dir.path()).unwrap().characters, vec!["Lin Dong"]);
     }
@@ -692,6 +705,36 @@ mod tests {
         let d = ScriptedDriver::new(vec![]);
         let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
         let svc = make_svc(d, 2);
-        assert!(load_or_extract(dir.path(), &svc, Some(300), &gtx, ref_tpl()).await.is_none());
+        let (t, errors) = load_or_extract(dir.path(), &svc, Some(300), &gtx, ref_tpl()).await;
+        assert!(t.is_none());
+        assert!(errors.is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn load_or_extract_returns_extraction_errors() {
+        // ref/ dir with one file; driver returns unparseable JSON → no terms,
+        // one error returned, nothing cached.
+        let dir = tempfile::tempdir().unwrap();
+        let ref_dir = dir.path().join("ref");
+        std::fs::create_dir(&ref_dir).unwrap();
+        write_ass(&ref_dir, "r1.ass", &["Lin Dong strikes"]);
+        let d = ScriptedDriver::new(vec![Ok("not json at all".into())]);
+        let (gtx, _grx) = tokio::sync::mpsc::channel::<GlossaryEvent>(64);
+        let svc = make_svc(d, 1);
+        let (t, errors) = load_or_extract(dir.path(), &svc, Some(300), &gtx, ref_tpl()).await;
+        // No terms extracted — unparseable response yields empty ReferenceTerminology.
+        assert!(t.is_none(), "expected None when all batches fail to parse: {t:?}");
+        // The error must be returned (not just logged).
+        assert_eq!(errors.len(), 1, "expected 1 error, got: {errors:?}");
+        assert!(
+            errors[0].contains("unparseable"),
+            "error must mention 'unparseable': {:?}",
+            errors[0]
+        );
+        // Cache must NOT have been written (no terms to cache).
+        assert!(
+            !dir.path().join(CACHE_FILENAME).exists(),
+            "cache must not be written when extraction yields no terms"
+        );
     }
 }
