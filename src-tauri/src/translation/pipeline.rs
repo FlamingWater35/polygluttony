@@ -233,7 +233,7 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
         for id in missing.iter().take(MAX_UNTRANSLATED_ISSUES) {
             issues.push(VerifyIssue {
                 line_id: *id,
-                source: st.raw_text(*id).to_string(),
+                source: strip_for_text(st.raw_text(*id)),
                 translation: String::new(),
                 issue_type: "untranslated".into(),
                 description: "line was not translated".into(),
@@ -957,7 +957,7 @@ mod tests {
 
     #[tokio::test]
     async fn untranslated_lines_without_verify_issues_synthesize_issues() {
-        let src = ass_source(&["你好", "再见"]);
+        let src = ass_source(&["你好", "{\\an8}再见"]);
         // Batch 1 returns only id 1 → Partial; id 2 requeues and dies down the
         // halving ladder on "not json". The verify call also gets "not json",
         // which degrades to a clean report — leaving id 2 untranslated with NO

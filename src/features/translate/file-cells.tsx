@@ -55,10 +55,7 @@ export function StatusGlyph({ kind, tone }: { kind: CellGlyph; tone: "translate"
   }
 }
 
-/**
- * The engine emits "drift", "glossary", "merged", "dropped", and the
- * synthesized "untranslated" type (pipeline.rs — warning-only files).
- */
+/** The engine emits "drift" and the synthesized "untranslated"; the other keys are pre-styled for future issue types. */
 const TAG_CLS: Record<string, string> = {
   drift: "border-[color:var(--color-state-verify)]/40 bg-[color:var(--color-state-verify)]/15 text-[color:var(--color-state-verify)]",
   glossary: "border-primary/40 bg-primary/15 text-primary",
