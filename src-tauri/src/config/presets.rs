@@ -36,8 +36,8 @@ fn conn(driver: Driver, base_url: &str, model: &str, api_key: &str) -> Connectio
         thinking_enabled: None,
         thinking_budget: None,
         thinking_glossary_budget: None,
-        web_search: None,
         thinking_glossary_norm_budget: None,
+        web_search: None,
     }
 }
 
