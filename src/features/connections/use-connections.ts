@@ -35,7 +35,11 @@ export function useConnection(name: string | null) {
 
 export function useConnectionMutations() {
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: KEY });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: KEY });
+    // Glossary view gates "look up names online" on this; keep it fresh when connections change.
+    qc.invalidateQueries({ queryKey: ["personalization-status"] });
+  };
   return {
     save: useMutation({
       mutationFn: ({ name, connection }: { name: string; connection: Connection }) =>
