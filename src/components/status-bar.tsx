@@ -31,6 +31,12 @@ export function StatusBar() {
     return `${done}/${all.length} files`;
   })();
 
+  const activeBatch = (() => {
+    const a = Object.values(tFiles).find((f) =>
+      ["translating", "retranslating", "cleanup", "verifying"].includes(f.state));
+    return a && a.totalBatches > 0 ? ` · batch ${a.batch}/${a.totalBatches}` : "";
+  })();
+
   // Engine exclusivity means at most one of these is active at a time.
   const activity = gBusy
     ? {
@@ -43,11 +49,11 @@ export function StatusBar() {
               : "Normalizing glossary…",
       }
     : translating
-      ? { to: "/translate" as const, label: `Translating · ${translatingCounts}` }
+      ? { to: "/translate" as const, label: `Translating · ${translatingCounts}${activeBatch}` }
       : null;
 
   return (
-    <footer className="col-start-2 flex h-8 items-center gap-3 border-t border-border bg-[color:var(--color-bg-deepest)] px-3 text-[11px] text-muted-foreground">
+    <footer className="col-start-2 flex h-8 items-center gap-3 border-t border-border bg-[color:var(--color-bg-deepest)] px-3 text-[11px] text-muted-foreground [box-shadow:inset_0_1px_0_rgba(225,166,54,.10)]">
       <span className="flex min-w-0 items-center gap-1.5">
         <Folder className="size-3.5 shrink-0" />
         <span className="truncate">{workdir ?? "No folder selected"}</span>

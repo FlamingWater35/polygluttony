@@ -11,6 +11,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useAppStore } from "@/stores/app-store";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Seal } from "@/components/seal";
 
 interface RailItem {
   to: string;
@@ -71,7 +72,7 @@ export function NavRail() {
             : "hover:bg-[color:var(--color-bg-hover)]",
         )}
       >
-        <Icon weight={active ? "fill" : "regular"} className="size-5" />
+        <Icon weight={active ? "fill" : "regular"} className={cn("size-5", active && "[filter:drop-shadow(0_0_7px_color-mix(in_oklch,var(--color-gold)_75%,transparent))]")} />
         {item.label}
         {item.to === "/connections" ? (
           <span
@@ -108,6 +109,9 @@ export function NavRail() {
 
   return (
     <nav className="flex h-full w-20 flex-col items-center gap-1 border-r border-border bg-[color:var(--sidebar)] py-3">
+      <div className="mb-2 grid place-items-center text-primary [filter:drop-shadow(0_0_8px_color-mix(in_oklch,var(--color-gold)_60%,transparent))]">
+        <Seal className="size-7" />
+      </div>
       {workflow.map(render)}
       <div className="flex-1" />
       {setup.map(render)}
