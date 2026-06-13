@@ -42,7 +42,7 @@ export function StatusGlyph({ kind, tone }: { kind: CellGlyph; tone: "translate"
         <span
           className="inline-block size-[13px] animate-spin rounded-full border-2 border-border align-[-2px]"
           style={{
-            borderTopColor: tone === "verify" ? "var(--color-state-verify)" : "var(--primary)",
+            borderTopColor: tone === "verify" ? "var(--color-state-verify)" : "var(--color-gold)",
           }}
         />
       );

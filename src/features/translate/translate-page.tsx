@@ -1,7 +1,11 @@
 import { Fragment, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CaretDown, CaretRight, Play, Stop } from "@phosphor-icons/react";
-import { stateToCells, StatusGlyph, IssuePanel } from "./file-cells";
+import { stateToCells, StatusGlyph, IssuePanel } from "./file-cells"
+import { BatchCell } from "./batch-cell"
+import { ReactorBar } from "./reactor-bar"
+import { RunIntegrityRing } from "./run-integrity-ring"
+import { batchCellState, pickHero, runIntegrity } from "./telemetry";
 import { LogToggleButton, LogPanel } from "@/components/log-drawer";
 import type { Tone } from "@/types/generated/Tone";
 import { ipc } from "@/lib/ipc";
@@ -23,6 +27,15 @@ const SELECT_CLS =
 
 /** Lines-per-minute heuristic for the estimate banner. */
 const LINES_PER_MINUTE = 600;
+
+/** Approx line range label for batch i, given the file's total lines + batch count. */
+function batchRange(i: number, row: { total: number; totalBatches: number }): string {
+  if (!row.totalBatches || !row.total) return ""
+  const per = Math.ceil(row.total / row.totalBatches)
+  const start = i * per + 1
+  const end = Math.min((i + 1) * per, row.total)
+  return `lines ${start}–${end}`
+}
 
 // ── state chip helpers ────────────────────────────────────────────────────────
 
@@ -82,6 +95,9 @@ export function TranslatePage() {
 
   const running = useTranslationRun((s) => s.running);
   const storeFiles = useTranslationRun((s) => s.files);
+  const heroName = running ? pickHero(storeFiles) : null;
+  const hero = heroName ? storeFiles[heroName] : null;
+  const integ = runIntegrity(storeFiles);
   const logs = useTranslationRun((s) => s.logs);
   const results = useTranslationRun((s) => s.results);
 
@@ -195,14 +211,6 @@ export function TranslatePage() {
     return { file: f, row, state, result };
   });
 
-  const inProgressCount = tableRows.filter(
-    ({ state }) => state !== "pending" && state !== "done" && state !== "warning" && state !== "failed",
-  ).length;
-
-  // Progress bar calculations (while running)
-  const doneMeterCount = tableRows.filter(({ state }) => state === "done" || state === "warning" || state === "failed").length;
-  const progressPct = Math.round((doneMeterCount / tableRows.length) * 100);
-
   // ── render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -260,6 +268,26 @@ export function TranslatePage() {
 
         {/* Completion summary */}
         {summaryEl}
+
+        {/* Hero batch card (active file during a run) */}
+        {hero && heroName ? (
+          <div className="relative overflow-hidden rounded-xl border border-[color:color-mix(in_oklch,var(--color-gold)_22%,transparent)] bg-[linear-gradient(180deg,rgba(225,166,54,.05),rgba(225,166,54,.015))] p-4">
+            <div className="mb-3 flex items-baseline justify-between">
+              <span className="font-mono text-[14px] text-[color:var(--color-ink-emphasis)]">{heroName}</span>
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {hero.total > 0 ? <><b className="font-semibold text-[color:var(--color-gold-hi)]">{hero.translated.toLocaleString()}</b>/{hero.total.toLocaleString()} translated</> : "starting…"}
+              </span>
+            </div>
+            <div className="grid grid-cols-[1fr_158px] items-stretch gap-5">
+              <div className="flex flex-col gap-2.5">
+                {Array.from({ length: Math.max(hero.totalBatches, 1) }, (_, i) => (
+                  <BatchCell key={i} index={i} range={batchRange(i, hero)} state={batchCellState(hero, i)} />
+                ))}
+              </div>
+              <RunIntegrityRing done={integ.done} total={integ.total} retranslated={integ.retranslated} />
+            </div>
+          </div>
+        ) : null}
 
         {/* File table */}
         <div className="rounded-md border border-border overflow-hidden">
@@ -382,19 +410,14 @@ export function TranslatePage() {
           </p>
         </SectionHelp>
 
-        {/* Overall progress bar (while running) */}
-        {running && tableRows.length > 0 ? (
-          <div className="space-y-1">
+        {/* Overall pipeline progress (while running) */}
+        {running && integ.total > 0 ? (
+          <div className="space-y-1.5">
             <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
-              <span>{inProgressCount > 0 ? `Translating file ${doneMeterCount + 1} of ${tableRows.length}…` : "Wrapping up…"}</span>
-              <span>{progressPct}%</span>
+              <span>Pipeline · {integ.done} of {integ.total} batches complete</span>
+              <span>{Math.round((integ.done / integ.total) * 100)}%</span>
             </div>
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full bg-primary transition-all duration-500"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
+            <ReactorBar done={integ.done} total={integ.total} />
           </div>
         ) : null}
 
