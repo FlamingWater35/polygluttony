@@ -38,7 +38,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div className="row-span-2">
           <NavRail />
         </div>
-        <main className="min-h-0 overflow-auto">{children}</main>
+        <main className="min-h-0 overflow-auto [view-transition-name:app-main]">{children}</main>
         <StatusBar />
       </div>
     </>
