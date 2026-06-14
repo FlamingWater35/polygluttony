@@ -230,7 +230,7 @@ export function TranslatePage() {
               value={tone}
               onChange={(e) => persistTone(e.target.value as Tone)}
             >
-              {TONES.map((t) => (
+              {[...TONES].sort().map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
