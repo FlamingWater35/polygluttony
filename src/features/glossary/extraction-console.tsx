@@ -22,7 +22,7 @@ const PHASE_LABEL: Record<GlossaryPhase, string> = {
   loading: "Reading subtitles",
   reference: "Gathering reference terms",
   extracting: "Extracting terms",
-  normalizing: "Standardizing",
+  normalizing: "Normalizing",
   personalizing: "Looking up established names",
   saving: "Saving glossary",
 }
