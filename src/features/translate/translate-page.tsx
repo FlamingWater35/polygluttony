@@ -95,7 +95,10 @@ export function TranslatePage() {
 
   const running = useTranslationRun((s) => s.running);
   const storeFiles = useTranslationRun((s) => s.files);
-  const heroName = running ? pickHero(storeFiles) : null;
+  // The hero card spotlights one file's live batches. It auto-follows the first
+  // in-flight file, but the user can pin a different file by clicking its row.
+  const [selectedHero, setSelectedHero] = useState<string | null>(null);
+  const heroName = running ? (selectedHero ?? pickHero(storeFiles)) : null;
   const hero = heroName ? storeFiles[heroName] : null;
   const integ = runIntegrity(storeFiles);
   const logs = useTranslationRun((s) => s.logs);
@@ -147,6 +150,7 @@ export function TranslatePage() {
 
   const handleStart = () => {
     setExpanded(new Set());
+    setSelectedHero(null);
     useTranslationRun.getState().start(selected);
     ipc.startTranslation({
       folder: workdir,
@@ -175,20 +179,46 @@ export function TranslatePage() {
 
   let summaryEl: React.ReactNode = null;
   if (results !== null) {
-    const clean = results.filter((r) => !r.has_warnings).length;
-    const warn = results.filter((r) => r.has_warnings).length;
+    // Only files that actually succeeded count as "translated"/"clean". Failed
+    // or cancelled files have success=false (and has_warnings=false), so they
+    // must NOT be folded into "clean".
+    const succeeded = results.filter((r) => r.success);
+    const failed = results.length - succeeded.length;
+    const clean = succeeded.filter((r) => !r.has_warnings).length;
+    const warn = succeeded.length - clean;
+    const toneCls =
+      failed > 0
+        ? "border-[color:var(--color-danger)]/30 bg-[color:var(--color-danger)]/5"
+        : warn > 0
+          ? "border-[color:var(--color-alert)]/30 bg-[color:var(--color-alert)]/5"
+          : "border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/5";
     summaryEl = (
-      <div className="rounded-md border border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/5 px-4 py-2.5 text-sm">
-        <span className="font-medium text-foreground">
-          Translated {results.length} files —{" "}
-        </span>
-        <span className="text-[color:var(--color-success)]">{clean} clean</span>
-        {warn > 0 ? (
+      <div className={`rounded-md border ${toneCls} px-4 py-2.5 text-sm`}>
+        {succeeded.length > 0 ? (
           <>
-            <span className="text-muted-foreground">, </span>
-            <span className="text-[color:var(--color-alert)]">{warn} need a look</span>
+            <span className="font-medium text-foreground">
+              Translated {succeeded.length} file{succeeded.length !== 1 ? "s" : ""} —{" "}
+            </span>
+            <span className="text-[color:var(--color-success)]">{clean} clean</span>
+            {warn > 0 ? (
+              <>
+                <span className="text-muted-foreground">, </span>
+                <span className="text-[color:var(--color-alert)]">{warn} need a look</span>
+              </>
+            ) : null}
+            {failed > 0 ? (
+              <>
+                <span className="text-muted-foreground">, </span>
+                <span className="text-[color:var(--color-danger)]">{failed} failed or cancelled</span>
+              </>
+            ) : null}
           </>
-        ) : null}
+        ) : (
+          <>
+            <span className="font-medium text-foreground">No files completed — </span>
+            <span className="text-[color:var(--color-danger)]">{failed} failed or cancelled</span>
+          </>
+        )}
         <span className="text-muted-foreground">.</span>
       </div>
     );
@@ -262,8 +292,8 @@ export function TranslatePage() {
         )}
 
         <HelpText>
-          Polygluttony translates each file, then checks its own work. Files that need a look turn
-          amber — click one to see the exact issues.
+          Polygluttony translates each file, then checks its own work. While a run is active, click any
+          file to watch its batches above. Files that need a look turn amber — click one to see the exact issues.
         </HelpText>
 
         {/* Completion summary */}
@@ -322,20 +352,28 @@ export function TranslatePage() {
                   const expandable = state === "warning" && issues.length > 0;
                   const isExpanded = expandable && expanded.has(file.name);
                   const cells = stateToCells(state, row?.reachedVerify ?? false);
+                  const isHero = running && heroName === file.name;
+                  // While running, a click pins this file as the hero; otherwise
+                  // a click expands a warning file's issue list.
+                  const onActivate = running
+                    ? () => setSelectedHero(file.name)
+                    : expandable
+                      ? () => toggleExpand(file.name)
+                      : undefined;
 
                   return (
                     <Fragment key={file.name}>
                       <tr
-                        className={`border-b border-border last:border-0 hover:bg-[color:var(--color-bg-hover)]${expandable ? " cursor-pointer" : ""}`}
-                        onClick={expandable ? () => toggleExpand(file.name) : undefined}
-                        role={expandable ? "button" : undefined}
-                        tabIndex={expandable ? 0 : undefined}
+                        className={`border-b border-border last:border-0 hover:bg-[color:var(--color-bg-hover)]${onActivate ? " cursor-pointer" : ""}${isHero ? " bg-[color:color-mix(in_oklch,var(--color-gold)_8%,transparent)]" : ""}`}
+                        onClick={onActivate}
+                        role={onActivate ? "button" : undefined}
+                        tabIndex={onActivate ? 0 : undefined}
                         onKeyDown={
-                          expandable
+                          onActivate
                             ? (e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                   e.preventDefault();
-                                  toggleExpand(file.name);
+                                  onActivate();
                                 }
                               }
                             : undefined
