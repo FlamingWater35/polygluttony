@@ -93,6 +93,9 @@ jobs:
               ;;
             macos)
               app=$(ls -d src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app | head -n1)
+              # Ad-hoc sign so macOS shows the normal Gatekeeper prompt instead of
+              # "is damaged" (full notarization would need a paid Apple Developer ID).
+              codesign --force --deep --sign - "$app"
               ditto -c -k --keepParent "$app" "dist-release/Polygluttony-${TAG}-macos.zip"
               ;;
           esac
@@ -106,3 +109,15 @@ jobs:
           draft: true
           fail_on_unmatched_files: true
           files: dist-release/*
+          body: |
+            Download the build for your platform below.
+
+            These builds are not signed with a paid developer certificate, so the OS
+            warns on first launch:
+
+            - **macOS** — the first launch is blocked. Open **System Settings →
+              Privacy & Security**, scroll to the bottom, and click **Open Anyway**;
+              then launch Polygluttony again and confirm. (Right-click → Open no longer
+              works on recent macOS.)
+            - **Windows** — on the SmartScreen prompt, click **More info → Run anyway**.
+            - **Linux** — `chmod +x Polygluttony-*.AppImage`, then run it.

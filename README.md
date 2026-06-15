@@ -25,9 +25,11 @@ Polygluttony translates `.ass` subtitle files with an LLM while guarding against
 
 ## Download
 
-Grab the latest build for your OS from the [**Releases**](../../releases/latest) page — macOS (Apple Silicon + Intel), Windows, and Linux.
+Grab the latest build for your OS from the [**Releases**](../../releases/latest) page — macOS (Apple Silicon), Windows, and Linux.
 
-> Builds are unsigned for now. On macOS, right-click the app → **Open** the first time; on Windows, choose **More info → Run anyway**.
+> These builds aren't signed with a paid developer certificate, so the OS warns on first launch:
+> - **macOS** — the first launch is blocked. Open **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway**, then launch again and confirm. (Right-click → Open no longer works on recent macOS.)
+> - **Windows** — on the SmartScreen prompt, choose **More info → Run anyway**.
 
 ## Build from source
 
