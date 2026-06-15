@@ -1,6 +1,7 @@
 name: Release
 
-# Build the desktop app for every platform and publish a (draft) GitHub Release.
+# Build one installer per platform, rename to Polygluttony-<tag>-<os>.<ext>,
+# and publish them to a (draft) GitHub Release.
 # Triggers on a version tag push (e.g. v1.0.0), or manually with a tag input.
 on:
   push:
@@ -15,36 +16,35 @@ on:
 permissions:
   contents: write
 
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
 jobs:
   release:
-    name: ${{ matrix.platform }} · ${{ matrix.arch }}
+    name: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest # Apple Silicon
-            arch: arm64
-            args: "--target aarch64-apple-darwin"
+          - platform: macos-latest # Apple Silicon only
+            os: macos
             rust-target: aarch64-apple-darwin
-          - platform: macos-latest # Intel
-            arch: intel
-            args: "--target x86_64-apple-darwin"
-            rust-target: x86_64-apple-darwin
+            tauri-args: "--target aarch64-apple-darwin --bundles app"
           - platform: ubuntu-22.04
-            arch: x64
-            args: ""
+            os: linux
             rust-target: ""
+            tauri-args: "--bundles appimage"
           - platform: windows-latest
-            arch: x64
-            args: ""
+            os: windows
             rust-target: ""
+            tauri-args: "--bundles nsis"
 
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.os == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -74,18 +74,35 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
 
-      - name: Build and release
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.event.inputs.tag || github.ref_name }}
-          releaseName: Polygluttony __VERSION__
-          releaseBody: |
-            Download the installer for your platform from the assets below.
+      - name: Build
+        run: bun tauri build ${{ matrix.tauri-args }}
 
-            Builds are unsigned for now — on macOS, right-click the app → **Open**
-            the first time; on Windows, choose **More info → Run anyway**.
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+      - name: Stage artifact as Polygluttony-${{ env.TAG }}-${{ matrix.os }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-release
+          case "${{ matrix.os }}" in
+            windows)
+              src=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe | head -n1)
+              cp "$src" "dist-release/Polygluttony-${TAG}-windows.exe"
+              ;;
+            linux)
+              src=$(ls src-tauri/target/release/bundle/appimage/*.AppImage | head -n1)
+              cp "$src" "dist-release/Polygluttony-${TAG}-linux.AppImage"
+              ;;
+            macos)
+              app=$(ls -d src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app | head -n1)
+              ditto -c -k --keepParent "$app" "dist-release/Polygluttony-${TAG}-macos.zip"
+              ;;
+          esac
+          ls -la dist-release
+
+      - name: Publish to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Polygluttony ${{ env.TAG }}
+          draft: true
+          fail_on_unmatched_files: true
+          files: dist-release/*
