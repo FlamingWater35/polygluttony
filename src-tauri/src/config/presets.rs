@@ -41,11 +41,19 @@ fn conn(driver: Driver, base_url: &str, model: &str, api_key: &str) -> Connectio
     }
 }
 
-const ANTHROPIC_MODELS: &[&str] =
-    &["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"];
+const ANTHROPIC_MODELS: &[&str] = &["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"];
 const OPENAI_MODELS: &[&str] = &["gpt-5.2", "gpt-5.1", "gpt-5", "gpt-4.1", "o4-mini"];
 const GOOGLE_MODELS: &[&str] = &["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"];
 const OLLAMA_MODELS: &[&str] = &["llama3.1", "qwen2.5"];
+const OPENROUTER_MODELS: &[&str] = &[
+    "openai/gpt-5.5",
+    "anthropic/claude-sonnet-4.6",
+    "google/gemini-3-flash-preview",
+    "deepseek/deepseek-v4-flash",
+    "xiaomi/mimo-v2.5",
+    "minimax/minimax-m3",
+    "z-ai/glm-5.2",
+];
 
 fn models(list: &[&str]) -> Vec<String> {
     list.iter().map(|s| s.to_string()).collect()
@@ -55,39 +63,85 @@ const ANTHROPIC_BASE: &str = "https://api.anthropic.com";
 const GOOGLE_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/openai/";
 const OPENAI_BASE: &str = "https://api.openai.com/v1";
 const OLLAMA_BASE: &str = "http://localhost:11434/v1";
+const OPENROUTER_BASE: &str = "https://openrouter.ai/api/v1";
 
 /// The provider preset table for the UI dropdown.
 pub fn presets() -> Vec<Preset> {
     vec![
-        Preset { key: "anthropic".into(), label: "Anthropic".into(),
-            driver: Some(Driver::Anthropic), base_url: ANTHROPIC_BASE.into(),
-            model: "claude-opus-4-5".into(), models: models(ANTHROPIC_MODELS) },
-        Preset { key: "google".into(), label: "Google (Gemini)".into(),
-            driver: Some(Driver::Openai), base_url: GOOGLE_BASE.into(),
-            model: "gemini-2.5-pro".into(), models: models(GOOGLE_MODELS) },
-        Preset { key: "openai".into(), label: "OpenAI".into(),
-            driver: Some(Driver::OpenaiResponses), base_url: OPENAI_BASE.into(),
-            model: "gpt-5.2".into(), models: models(OPENAI_MODELS) },
-        Preset { key: "ollama".into(), label: "Ollama (local)".into(),
-            driver: Some(Driver::Openai), base_url: OLLAMA_BASE.into(),
-            model: "llama3.1".into(), models: models(OLLAMA_MODELS) },
-        Preset { key: "custom".into(), label: "Custom".into(),
-            driver: None, base_url: String::new(),
-            model: String::new(), models: vec![] },
+        Preset {
+            key: "anthropic".into(),
+            label: "Anthropic".into(),
+            driver: Some(Driver::Anthropic),
+            base_url: ANTHROPIC_BASE.into(),
+            model: "claude-opus-4-5".into(),
+            models: models(ANTHROPIC_MODELS),
+        },
+        Preset {
+            key: "google".into(),
+            label: "Google (Gemini)".into(),
+            driver: Some(Driver::Openai),
+            base_url: GOOGLE_BASE.into(),
+            model: "gemini-2.5-pro".into(),
+            models: models(GOOGLE_MODELS),
+        },
+        Preset {
+            key: "openai".into(),
+            label: "OpenAI".into(),
+            driver: Some(Driver::OpenaiResponses),
+            base_url: OPENAI_BASE.into(),
+            model: "gpt-5.2".into(),
+            models: models(OPENAI_MODELS),
+        },
+        Preset {
+            key: "ollama".into(),
+            label: "Ollama (local)".into(),
+            driver: Some(Driver::Openai),
+            base_url: OLLAMA_BASE.into(),
+            model: "llama3.1".into(),
+            models: models(OLLAMA_MODELS),
+        },
+        Preset {
+            key: "openrouter".into(),
+            label: "OpenRouter".into(),
+            driver: Some(Driver::Openai),
+            base_url: OPENROUTER_BASE.into(),
+            model: "openai/gpt-5.5".into(),
+            models: models(OPENROUTER_MODELS),
+        },
+        Preset {
+            key: "custom".into(),
+            label: "Custom".into(),
+            driver: None,
+            base_url: String::new(),
+            model: String::new(),
+            models: vec![],
+        },
     ]
 }
 
 /// The default `AppConfig` seeded on first run.
 pub fn default_config() -> AppConfig {
     let mut connections: BTreeMap<String, Connection> = BTreeMap::new();
-    connections.insert("anthropic".into(),
-        conn(Driver::Anthropic, ANTHROPIC_BASE, "claude-opus-4-5", ""));
-    connections.insert("google".into(),
-        conn(Driver::Openai, GOOGLE_BASE, "gemini-2.5-pro", ""));
-    connections.insert("openai".into(),
-        conn(Driver::OpenaiResponses, OPENAI_BASE, "gpt-5.2", ""));
-    connections.insert("ollama".into(),
-        conn(Driver::Openai, OLLAMA_BASE, "llama3.1", "ollama"));
+    connections.insert(
+        "anthropic".into(),
+        conn(Driver::Anthropic, ANTHROPIC_BASE, "claude-opus-4-5", ""),
+    );
+    connections.insert(
+        "google".into(),
+        conn(Driver::Openai, GOOGLE_BASE, "gemini-2.5-pro", ""),
+    );
+    connections.insert(
+        "openai".into(),
+        conn(Driver::OpenaiResponses, OPENAI_BASE, "gpt-5.2", ""),
+    );
+    connections.insert(
+        "ollama".into(),
+        conn(Driver::Openai, OLLAMA_BASE, "llama3.1", "ollama"),
+    );
+    connections.insert(
+        "openrouter".into(),
+        conn(Driver::Openai, OPENROUTER_BASE, "openai/gpt-5.5", ""),
+    );
 
     AppConfig {
         default_source: "zh".into(),
@@ -123,12 +177,23 @@ mod tests {
     fn presets_cover_five_providers_with_drivers() {
         let presets = presets();
         let keys: Vec<&str> = presets.iter().map(|p| p.key.as_str()).collect();
-        assert_eq!(keys, ["anthropic", "google", "openai", "ollama", "custom"]);
-        assert_eq!(presets[0].driver, Some(Driver::Anthropic));   // anthropic
-        assert_eq!(presets[1].driver, Some(Driver::Openai));      // google
+        assert_eq!(
+            keys,
+            [
+                "anthropic",
+                "google",
+                "openai",
+                "ollama",
+                "openrouter",
+                "custom"
+            ]
+        );
+        assert_eq!(presets[0].driver, Some(Driver::Anthropic)); // anthropic
+        assert_eq!(presets[1].driver, Some(Driver::Openai)); // google
         assert_eq!(presets[2].driver, Some(Driver::OpenaiResponses)); // openai
-        assert_eq!(presets[3].driver, Some(Driver::Openai));      // ollama
-        assert_eq!(presets[4].driver, None);                      // custom = auto-detect
+        assert_eq!(presets[3].driver, Some(Driver::Openai)); // ollama
+        assert_eq!(presets[3].driver, Some(Driver::Openai)); // openrouter
+        assert_eq!(presets[4].driver, None); // custom = auto-detect
         assert!(presets[0].models.iter().any(|m| m.starts_with("claude")));
     }
 }
