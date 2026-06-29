@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { ipc } from "@/lib/ipc";
 import { Spinner } from "@/components/ui/spinner";
 
-const GITHUB_REPO = "FlamingWater35/polygluttony";
+const GITHUB_REPO = "FlamingWater35/polygluttony-next";
 const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`;
 const API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
@@ -132,7 +132,7 @@ export function SettingsPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-[13px] font-medium text-foreground">
-                    Polygluttony {currentVersion ? `v${currentVersion}` : "..."}
+                    Polygluttony Next {currentVersion ? `v${currentVersion}` : "..."}
                   </h3>
                   <HelpText>
                     {isChecking

@@ -39,7 +39,7 @@ export function WelcomePage() {
     <div className="flex h-full flex-col items-center justify-center gap-6 p-10">
       <div className="flex flex-col items-center gap-1 text-center">
         <Translate weight="fill" className="size-10 text-primary" />
-        <h1 className="text-[22px] font-semibold text-foreground">Polygluttony</h1>
+        <h1 className="text-[22px] font-semibold text-foreground">Polygluttony Next</h1>
         <p className="text-sm text-muted-foreground">
           LLM-powered subtitle translation for donghua &amp; anime.
         </p>
@@ -93,7 +93,7 @@ export function WelcomePage() {
         </div>
       )}
       {emptyResult ? (
-        <p className="text-center text-[12px] text-[color:var(--color-alert)]">
+        <p className="text-center text-[12px] text-(--color-alert)">
           No subtitle files found here.
         </p>
       ) : null}
@@ -113,8 +113,8 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-[color:var(--card)] px-4 py-3">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[color:var(--popover)] text-[12px] text-primary">
+    <div className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-popover text-[12px] text-primary">
         {n}
       </span>
       <div className="min-w-0 flex-1">

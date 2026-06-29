@@ -35,14 +35,14 @@ const STEPS = [
   {
     n: 1,
     title: "Connect an AI provider",
-    body: "Polygluttony needs an AI service to do the translating. Add one and paste in your API key.",
+    body: "Polygluttony Next needs an AI service to do the translating. Add one and paste in your API key.",
     to: "/connections",
     link: "Open Connections",
   },
   {
     n: 2,
     title: "Open a folder",
-    body: "Point Polygluttony at a folder of subtitles. It scans them and shows what’s already translated and what isn’t.",
+    body: "Point Polygluttony Next at a folder of subtitles. It scans them and shows what’s already translated and what isn’t.",
     to: "/",
     link: "Choose a folder",
   },
@@ -57,7 +57,7 @@ const STEPS = [
   {
     n: 4,
     title: "Translate",
-    body: "Pick your files and press Translate. Polygluttony checks its own work as it goes and flags anything that looks off.",
+    body: "Pick your files and press Translate. Polygluttony Next checks its own work as it goes and flags anything that looks off.",
     to: "/translate",
     link: "Open Translate",
   },
@@ -70,9 +70,9 @@ function GettingStarted() {
         {STEPS.map((s) => (
           <div
             key={s.n}
-            className="flex items-start gap-3 rounded-lg border border-border bg-[color:var(--card)] px-3.5 py-3"
+            className="flex items-start gap-3 rounded-lg border border-border bg-card px-3.5 py-3"
           >
-            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[color:var(--popover)] text-[12px] text-primary">
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-popover text-[12px] text-primary">
               {s.n}
             </span>
             <div className="min-w-0 flex-1">
@@ -111,7 +111,7 @@ function Explainer({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-[color:var(--card)] px-4 py-3.5">
+    <div className="rounded-lg border border-border bg-card px-4 py-3.5">
       <div className="text-[13px] font-semibold text-foreground">{title}</div>
       <p className="mt-1 text-[12.5px] text-foreground/90">{children}</p>
       <div className="mt-2 border-l-2 border-border pl-2.5 text-[11.5px] text-muted-foreground">
@@ -123,7 +123,7 @@ function Explainer({
 
 function BehindTheScenes() {
   return (
-    <Section title="Behind the scenes" sub="What Polygluttony is doing for you while it translates.">
+    <Section title="Behind the scenes" sub="What Polygluttony Next is doing for you while it translates.">
       <div className="space-y-2">
         <Explainer
           title="It keeps names and terms consistent"
@@ -135,7 +135,7 @@ function BehindTheScenes() {
           }
         >
           Build a glossary once — or pull one from subtitles you’ve already translated — and
-          Polygluttony hands those agreed translations to the AI on every episode.
+          Polygluttony Next hands those agreed translations to the AI on every episode.
         </Explainer>
 
         <Explainer
@@ -253,14 +253,14 @@ const TROUBLE: {
       <>
         Open the glossary in your own editor with{" "}
         <span className="font-semibold text-foreground">Glossary ▸ Open in editor</span> —
-        Polygluttony reloads it automatically when you save.
+        Polygluttony Next reloads it automatically when you save.
       </>
     ),
     links: [{ to: "/glossary", label: "Glossary" }],
   },
   {
     q: "A batch failed or some lines came back wrong",
-    a: "Polygluttony retries automatically and keeps the good lines. If it still fails, the log panel in Translate shows the exact spot.",
+    a: "Polygluttony Next retries automatically and keeps the good lines. If it still fails, the log panel in Translate shows the exact spot.",
     links: [{ to: "/translate", label: "Translate" }],
   },
 ];
@@ -272,16 +272,16 @@ function Troubleshooting() {
         {TROUBLE.map((t) => (
           <div
             key={t.q}
-            className="rounded-lg border border-border bg-[color:var(--card)] px-4 py-3"
+            className="rounded-lg border border-border bg-card px-4 py-3"
           >
             <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
-              <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full border border-[color:var(--color-alert)] bg-[color:var(--popover)] text-[11px] font-bold text-[color:var(--color-alert)]">
+              <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full border border-(--color-alert) bg-popover text-[11px] font-bold text-(--color-alert)">
                 ?
               </span>
               “{t.q}”
             </div>
-            <p className="mt-1 pl-[26px] text-[12.5px] text-foreground/90">{t.a}</p>
-            <div className="mt-1.5 pl-[26px] text-[11.5px]">
+            <p className="mt-1 pl-6.5 text-[12.5px] text-foreground/90">{t.a}</p>
+            <div className="mt-1.5 pl-6.5 text-[11.5px]">
               {t.links.map((l, j) => (
                 <span key={l.to}>
                   {j > 0 ? (
@@ -307,9 +307,9 @@ function Troubleshooting() {
 export function HelpPage() {
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title="Help" description="A quick guide to how Polygluttony works." />
+      <PageHeader title="Help" description="A quick guide to how Polygluttony Next works." />
       <div className="flex-1 overflow-auto p-5">
-        <div className="mx-auto max-w-[640px] space-y-8 pb-10">
+        <div className="mx-auto max-w-160 space-y-8 pb-10">
           <GettingStarted />
           <BehindTheScenes />
           <Troubleshooting />

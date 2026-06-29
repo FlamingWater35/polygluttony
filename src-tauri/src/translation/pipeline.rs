@@ -84,7 +84,12 @@ pub async fn translate_file(job: FileJob<'_>) -> FileResult {
     match run(job).await {
         Ok(result) => result,
         Err(message) => {
-            let _ = tx.send(RunEvent::Error { file: file.clone(), message }).await;
+            let _ = tx
+                .send(RunEvent::Error {
+                    file: file.clone(),
+                    message,
+                })
+                .await;
             let _ = tx
                 .send(RunEvent::State {
                     file: file.clone(),
@@ -124,7 +129,12 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
     };
 
     st.state(FileStateKind::Translating, None).await;
-    st.log(LogLevel::Info, LogPhase::Parse, format!("{} dialogue lines", st.lines.len())).await;
+    st.log(
+        LogLevel::Info,
+        LogPhase::Parse,
+        format!("{} dialogue lines", st.lines.len()),
+    )
+    .await;
     if st.lines.is_empty() {
         return Err("no dialogue lines".into());
     }
@@ -144,7 +154,13 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
         }
         st.state(FileStateKind::Verifying, None).await;
         let stripped = st.stripped_pairs();
-        let report = verify_file(job.svc, &stripped, &job.glossary.all_terms(), &job.prompts.verify).await;
+        let report = verify_file(
+            job.svc,
+            &stripped,
+            &job.glossary.all_terms(),
+            &job.prompts.verify,
+        )
+        .await;
         let report = match report {
             Ok(r) => r,
             Err(e) => {
@@ -286,7 +302,11 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
     })
     .await;
     st.state(
-        if has_warnings { FileStateKind::Warning } else { FileStateKind::Done },
+        if has_warnings {
+            FileStateKind::Warning
+        } else {
+            FileStateKind::Done
+        },
         None,
     )
     .await;
@@ -315,8 +335,12 @@ async fn run(job: FileJob<'_>) -> Result<FileResult, String> {
 /// file (and the all-samples-failed case already returns a full-file scope
 /// from the first call).
 fn scopes_for(report: &VerifyReport, all_ids: &[u32]) -> Vec<Scope> {
-    let scopes =
-        compute_scopes(&report.sampled_line_ids, &report.failed_line_ids, all_ids, SCOPE_PADDING);
+    let scopes = compute_scopes(
+        &report.sampled_line_ids,
+        &report.failed_line_ids,
+        all_ids,
+        SCOPE_PADDING,
+    );
     if !scopes.is_empty() || report.failed_line_ids.is_empty() {
         return scopes;
     }
@@ -347,7 +371,12 @@ impl FileState<'_, '_> {
     }
 
     async fn state(&self, state: FileStateKind, detail: Option<String>) {
-        self.emit(RunEvent::State { file: self.job.file_name.clone(), state, detail }).await;
+        self.emit(RunEvent::State {
+            file: self.job.file_name.clone(),
+            state,
+            detail,
+        })
+        .await;
     }
 
     async fn log(&self, level: LogLevel, phase: LogPhase, message: String) {
@@ -377,7 +406,12 @@ impl FileState<'_, '_> {
     fn stripped_pairs(&self) -> BTreeMap<u32, (String, String)> {
         self.translations
             .iter()
-            .map(|(id, tgt)| (*id, (strip_for_text(self.raw_text(*id)), strip_for_text(tgt))))
+            .map(|(id, tgt)| {
+                (
+                    *id,
+                    (strip_for_text(self.raw_text(*id)), strip_for_text(tgt)),
+                )
+            })
             .collect()
     }
 
@@ -401,8 +435,10 @@ impl FileState<'_, '_> {
             batch_num += 1;
             let n = (batch_size as usize).min(pending.len());
             let take: Vec<u32> = pending.drain(..n).collect();
-            let raw: Vec<(u32, String)> =
-                take.iter().map(|id| (*id, self.raw_text(*id).to_string())).collect();
+            let raw: Vec<(u32, String)> = take
+                .iter()
+                .map(|id| (*id, self.raw_text(*id).to_string()))
+                .collect();
 
             let outcome = translate_batch_tagged(
                 self.job.svc,
@@ -454,7 +490,10 @@ impl FileState<'_, '_> {
                         .await;
                     }
                 }
-                BatchOutcome::Partial { translated, failed_from } => {
+                BatchOutcome::Partial {
+                    translated,
+                    failed_from,
+                } => {
                     let merged_count = translated.len();
                     self.translations.extend(translated);
                     // Re-queue the unfinished tail at the front
@@ -475,8 +514,7 @@ impl FileState<'_, '_> {
                     .await;
                     // Recompute total_batches after every Partial requeue so
                     // Progress never reports batch > total_batches.
-                    total_batches =
-                        batch_num + (pending.len() as u32).div_ceil(batch_size);
+                    total_batches = batch_num + (pending.len() as u32).div_ceil(batch_size);
                     self.progress(batch_num, total_batches).await;
                     // Halve on <10% success (`translator.py:524-527`). At the
                     // floor keep the size: a Partial always merges at least one
@@ -485,8 +523,7 @@ impl FileState<'_, '_> {
                         if let Some(s) = halved(batch_size) {
                             batch_size = s;
                             // Recompute again after halving.
-                            total_batches =
-                                batch_num + (pending.len() as u32).div_ceil(batch_size);
+                            total_batches = batch_num + (pending.len() as u32).div_ceil(batch_size);
                         }
                     }
                 }
@@ -559,7 +596,11 @@ impl FileState<'_, '_> {
             self.log(
                 LogLevel::Info,
                 LogPhase::Cleanup,
-                format!("{} cleaned, {} still dirty", report.cleaned.len(), report.failed.len()),
+                format!(
+                    "{} cleaned, {} still dirty",
+                    report.cleaned.len(),
+                    report.failed.len()
+                ),
             )
             .await;
         }
@@ -610,7 +651,8 @@ impl FileState<'_, '_> {
                     self.translations.extend(translated);
                 }
                 BatchOutcome::Failure(message) => {
-                    self.log(LogLevel::Warning, LogPhase::Retranslate, message).await;
+                    self.log(LogLevel::Warning, LogPhase::Retranslate, message)
+                        .await;
                     // Log and continue to the next chunk; don't abort the scope.
                 }
                 BatchOutcome::Fatal(message) => {
@@ -660,7 +702,12 @@ mod tests {
     async fn run_pipeline(
         source: &str,
         responses: Vec<Result<String, crate::llm::error::LlmError>>,
-    ) -> (FileResult, Vec<RunEvent>, std::sync::Arc<ScriptedDriver>, tempfile::TempDir) {
+    ) -> (
+        FileResult,
+        Vec<RunEvent>,
+        std::sync::Arc<ScriptedDriver>,
+        tempfile::TempDir,
+    ) {
         let driver = ScriptedDriver::new(responses);
         let (tx, mut rx) = mpsc::channel(256);
         let svc = LlmService::new(driver.clone(), 2, CancellationToken::new(), tx.clone());
@@ -702,7 +749,10 @@ mod tests {
         let (result, events, _, _dir) = run_pipeline(
             &src,
             vec![
-                Ok(ok_batch(&[(1, "Hello there friend"), (2, "Goodbye for now")])),
+                Ok(ok_batch(&[
+                    (1, "Hello there friend"),
+                    (2, "Goodbye for now"),
+                ])),
                 Ok(r#"{"issues":[]}"#.into()),
             ],
         )
@@ -714,11 +764,21 @@ mod tests {
         assert_eq!(out.file_name().unwrap().to_str().unwrap(), "ep01.eng.ass");
         let written = std::fs::read_to_string(&out).unwrap();
         assert!(written.contains("Hello there friend"));
-        assert!(written.contains("; Translated at home with Polygluttony"));
-        assert!(events.iter().any(
-            |e| matches!(e, RunEvent::State { state: FileStateKind::Verifying, .. })
-        ));
-        assert!(events.iter().any(|e| matches!(e, RunEvent::FileDone { has_warnings: false, .. })));
+        assert!(written.contains("; Translated at home with Polygluttony Next"));
+        assert!(events.iter().any(|e| matches!(
+            e,
+            RunEvent::State {
+                state: FileStateKind::Verifying,
+                ..
+            }
+        )));
+        assert!(events.iter().any(|e| matches!(
+            e,
+            RunEvent::FileDone {
+                has_warnings: false,
+                ..
+            }
+        )));
     }
 
     #[tokio::test]
@@ -728,7 +788,10 @@ mod tests {
             &src,
             vec![
                 Ok(ok_batch(&[(1, "Hello my good friend")])), // ids 2,3 missing → partial
-                Ok(ok_batch(&[(2, "Goodbye then friend"), (3, "Off we go now")])),
+                Ok(ok_batch(&[
+                    (2, "Goodbye then friend"),
+                    (3, "Off we go now"),
+                ])),
                 Ok(r#"{"issues":[]}"#.into()),
             ],
         )
@@ -752,48 +815,63 @@ mod tests {
         )
         .await;
         assert!(result.success && !result.has_warnings);
-        assert!(events
-            .iter()
-            .any(|e| matches!(e, RunEvent::State { state: FileStateKind::Cleanup, .. })));
+        assert!(events.iter().any(|e| matches!(
+            e,
+            RunEvent::State {
+                state: FileStateKind::Cleanup,
+                ..
+            }
+        )));
     }
 
     #[tokio::test]
     async fn verify_issues_trigger_scoped_retranslation() {
-        let src = ass_source(&["你好", "再见", "走吧", "好的", "不行", "可以", "什么", "哪里",
-                               "怎么", "为何", "真的", "假的"]);
+        let src = ass_source(&[
+            "你好", "再见", "走吧", "好的", "不行", "可以", "什么", "哪里", "怎么", "为何", "真的",
+            "假的",
+        ]);
         let all_ok: Vec<(u32, &str)> = (1..=12).map(|i| (i, "A clean English line here")).collect();
         let (result, events, _, _dir) = run_pipeline(
             &src,
             vec![
                 Ok(ok_batch(&all_ok)),
                 Ok(r#"{"issues":[{"id":6,"reason":"unrelated"}]}"#.into()), // verify #1 flags id 6
-                Ok(ok_batch(&[(6, "Retranslated line six properly")])),    // scoped redo
+                Ok(ok_batch(&[(6, "Retranslated line six properly")])),     // scoped redo
                 Ok(r#"{"issues":[]}"#.into()),                              // verify #2 clean
             ],
         )
         .await;
         assert!(result.success && !result.has_warnings);
-        assert!(events.iter().any(
-            |e| matches!(e, RunEvent::State { state: FileStateKind::Retranslating, .. })
-        ));
+        assert!(events.iter().any(|e| matches!(
+            e,
+            RunEvent::State {
+                state: FileStateKind::Retranslating,
+                ..
+            }
+        )));
     }
 
     #[tokio::test]
     async fn full_coverage_flags_trigger_full_retranslation() {
-        let src = ass_source(&["你好", "再见", "走吧", "好的", "不行", "可以", "什么", "哪里",
-                               "怎么", "为何", "真的", "假的"]);
+        let src = ass_source(&[
+            "你好", "再见", "走吧", "好的", "不行", "可以", "什么", "哪里", "怎么", "为何", "真的",
+            "假的",
+        ]);
         let all_ok: Vec<(u32, &str)> = (1..=12).map(|i| (i, "A clean English line here")).collect();
         let all_flagged = format!(
             r#"{{"issues":[{}]}}"#,
-            (1..=12).map(|i| format!(r#"{{"id":{i},"reason":"x"}}"#)).collect::<Vec<_>>().join(",")
+            (1..=12)
+                .map(|i| format!(r#"{{"id":{i},"reason":"x"}}"#))
+                .collect::<Vec<_>>()
+                .join(",")
         );
         let (result, _, driver, _dir) = run_pipeline(
             &src,
             vec![
                 Ok(ok_batch(&all_ok)),
                 Ok(all_flagged),
-                Ok(ok_batch(&all_ok)),          // full redo
-                Ok(r#"{"issues":[]}"#.into()),  // verify #2 clean
+                Ok(ok_batch(&all_ok)),         // full redo
+                Ok(r#"{"issues":[]}"#.into()), // verify #2 clean
             ],
         )
         .await;
@@ -803,8 +881,10 @@ mod tests {
 
     #[tokio::test]
     async fn exhausted_retranslation_writes_warning_file() {
-        let src = ass_source(&["你好", "再见", "走吧", "好的", "不行", "可以", "什么", "哪里",
-                               "怎么", "为何", "真的", "假的"]);
+        let src = ass_source(&[
+            "你好", "再见", "走吧", "好的", "不行", "可以", "什么", "哪里", "怎么", "为何", "真的",
+            "假的",
+        ]);
         let all_ok: Vec<(u32, &str)> = (1..=12).map(|i| (i, "A clean English line here")).collect();
         let flagged = r#"{"issues":[{"id":6,"reason":"unrelated"}]}"#;
         let redo = ok_batch(&[(6, "Still flagged line six")]);
@@ -825,7 +905,10 @@ mod tests {
         assert!(result.success);
         assert!(result.has_warnings);
         assert!(!result.issues.is_empty());
-        assert!(result.output_path.unwrap().ends_with("ep01.warning.eng.ass"));
+        assert!(result
+            .output_path
+            .unwrap()
+            .ends_with("ep01.warning.eng.ass"));
     }
 
     #[tokio::test]
@@ -833,7 +916,11 @@ mod tests {
         let src = ass_source(&["你好", "再见"]);
         let (result, _, driver, _dir) = run_pipeline(
             &src,
-            vec![Err(crate::llm::error::LlmError::Http { status: 401, body: "no".into(), retry_after: None })],
+            vec![Err(crate::llm::error::LlmError::Http {
+                status: 401,
+                body: "no".into(),
+                retry_after: None,
+            })],
         )
         .await;
         assert!(!result.success);
@@ -873,10 +960,11 @@ mod tests {
         //
         // Final state: translations = 12 (from prior backfill), has_warnings=true.
         // Oversupply hopeless+flagged to avoid panicking if our count is off.
-        let src = ass_source(&["你好", "再见", "走吧", "好的", "不行", "可以",
-                               "什么", "哪里", "怎么", "为何", "真的", "假的"]);
-        let all_ok: Vec<(u32, &str)> =
-            (1..=12).map(|i| (i, "A clean English line here")).collect();
+        let src = ass_source(&[
+            "你好", "再见", "走吧", "好的", "不行", "可以", "什么", "哪里", "怎么", "为何", "真的",
+            "假的",
+        ]);
+        let all_ok: Vec<(u32, &str)> = (1..=12).map(|i| (i, "A clean English line here")).collect();
         let all_flagged = format!(
             r#"{{"issues":[{}]}}"#,
             (1..=12)
@@ -889,19 +977,30 @@ mod tests {
         // 1 ok + 1 flagged + 6 hopeless + 1 flagged + 6 hopeless + 1 flagged = 16
         // plus 20 extras (harmless; ScriptedDriver just returns Failure on empty).
         let mut responses: Vec<_> = vec![Ok(ok_batch(&all_ok)), flagged()];
-        for _ in 0..6 { responses.push(hopeless()); }
+        for _ in 0..6 {
+            responses.push(hopeless());
+        }
         responses.push(flagged());
-        for _ in 0..6 { responses.push(hopeless()); }
+        for _ in 0..6 {
+            responses.push(hopeless());
+        }
         responses.push(flagged());
         // 20 extra entries
-        for _ in 0..10 { responses.push(hopeless()); }
-        for _ in 0..10 { responses.push(flagged()); }
+        for _ in 0..10 {
+            responses.push(hopeless());
+        }
+        for _ in 0..10 {
+            responses.push(flagged());
+        }
 
         let (result, _, _, _dir) = run_pipeline(&src, responses).await;
 
         // Redo gave 0 new translations but backfill restored the prior 12.
         assert!(result.success, "file write should still succeed");
-        assert!(result.has_warnings, "verify issues must propagate to has_warnings");
+        assert!(
+            result.has_warnings,
+            "verify issues must propagate to has_warnings"
+        );
         assert_eq!(
             result.translated_lines, 12,
             "prior translations must survive a total-outage redo"
@@ -914,7 +1013,10 @@ mod tests {
         let (result, events, _, _dir) = run_pipeline(
             &src,
             vec![
-                Ok(ok_batch(&[(1, "Hello there friend"), (2, "Goodbye for now")])),
+                Ok(ok_batch(&[
+                    (1, "Hello there friend"),
+                    (2, "Goodbye for now"),
+                ])),
                 Err(crate::llm::error::LlmError::Http {
                     status: 401,
                     body: "dead key".into(),
@@ -972,8 +1074,11 @@ mod tests {
         assert!(result.success);
         assert!(result.has_warnings);
         assert_eq!(result.translated_lines, 1);
-        let synth: Vec<_> =
-            result.issues.iter().filter(|i| i.issue_type == "untranslated").collect();
+        let synth: Vec<_> = result
+            .issues
+            .iter()
+            .filter(|i| i.issue_type == "untranslated")
+            .collect();
         assert_eq!(synth.len(), 1);
         assert_eq!(synth[0].line_id, 2);
         assert_eq!(synth[0].source, "再见");
@@ -983,7 +1088,11 @@ mod tests {
         let done = events
             .iter()
             .find_map(|e| match e {
-                RunEvent::FileDone { issues, has_warnings: true, .. } => Some(issues.clone()),
+                RunEvent::FileDone {
+                    issues,
+                    has_warnings: true,
+                    ..
+                } => Some(issues.clone()),
                 _ => None,
             })
             .expect("FileDone with warnings");
@@ -1013,7 +1122,11 @@ mod tests {
         let agg = &result.issues[10];
         assert_eq!(agg.line_id, 0);
         assert_eq!(agg.source, "");
-        assert!(agg.description.contains("3 more untranslated"), "{}", agg.description);
+        assert!(
+            agg.description.contains("3 more untranslated"),
+            "{}",
+            agg.description
+        );
     }
 
     #[tokio::test]
@@ -1066,7 +1179,11 @@ mod tests {
         let done_issues = events
             .iter()
             .find_map(|e| match e {
-                RunEvent::FileDone { issues, has_warnings: true, .. } => Some(issues.clone()),
+                RunEvent::FileDone {
+                    issues,
+                    has_warnings: true,
+                    ..
+                } => Some(issues.clone()),
                 _ => None,
             })
             .expect("FileDone with warnings");

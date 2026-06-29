@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::ass::parse::DialogueLine;
 use crate::error::AppResult;
 
-const CREDIT: &str = "; Translated at home with Polygluttony";
+const CREDIT: &str = "; Translated at home with Polygluttony Next";
 const DROPPED_SECTIONS: [&str; 3] = ["[aegisub project garbage]", "[fonts]", "[graphics]"];
 const EVENTS_FORMAT: &str =
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text";
@@ -51,11 +51,7 @@ pub fn render_translated(original: &str, translated: &[DialogueLine]) -> String 
 }
 
 /// Write to disk (UTF-8 + BOM is already part of the rendered string).
-pub fn write_translated(
-    path: &Path,
-    original: &str,
-    translated: &[DialogueLine],
-) -> AppResult<()> {
+pub fn write_translated(path: &Path, original: &str, translated: &[DialogueLine]) -> AppResult<()> {
     std::fs::write(path, render_translated(original, translated))?;
     Ok(())
 }
@@ -107,7 +103,7 @@ Comment: 0,0:00:00.00,0:00:00.01,Default,,0,0,0,,note\n";
         assert!(out.starts_with('\u{FEFF}'));
         let body = out.trim_start_matches('\u{FEFF}');
         // Credit injected under [Script Info].
-        assert!(body.starts_with("[Script Info]\n; Translated at home with Polygluttony\n"));
+        assert!(body.starts_with("[Script Info]\n; Translated at home with Polygluttony Next\n"));
         // Garbage + Fonts sections dropped, Styles kept verbatim.
         assert!(!body.contains("[Aegisub Project Garbage]"));
         assert!(!body.contains("fontname"));
@@ -126,7 +122,7 @@ Comment: 0,0:00:00.00,0:00:00.01,Default,,0,0,0,,note\n";
     fn handles_missing_optional_sections() {
         let minimal = "[Script Info]\nTitle: x\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n";
         let out = render_translated(minimal, &[line(100, "Hi")]);
-        assert!(out.contains("; Translated at home with Polygluttony"));
+        assert!(out.contains("; Translated at home with Polygluttony Next"));
         assert!(out.contains("Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hi"));
     }
 

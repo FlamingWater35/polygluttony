@@ -291,7 +291,7 @@ export function TranslatePage() {
         )}
 
         <HelpText>
-          Polygluttony translates each file, then checks its own work. While a run is active, click any
+          Polygluttony Next translates each file, then checks its own work. While a run is active, click any
           file to watch its batches above. Files that need a look turn amber — click one to see the exact issues.
         </HelpText>
 

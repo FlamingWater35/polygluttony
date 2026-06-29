@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/welcome.png" alt="Polygluttony" width="860">
+<img src="assets/welcome.png" alt="Polygluttony Next" width="860">
 
-# Polygluttony
+# Polygluttony Next
 
 **LLM-powered subtitle translation for donghua & anime — built to protect the things that break.**
 
@@ -21,11 +21,11 @@
 
 ---
 
-Polygluttony translates `.ass` subtitle files with an LLM while guarding against the failure modes that wreck naive machine translation. Point it at a folder, connect a provider (Anthropic, OpenAI, or any OpenAI-compatible endpoint — including Gemini), optionally build a glossary, and run — watching live, honest telemetry the whole way.
+Polygluttony Next translates `.ass` subtitle files with an LLM while guarding against the failure modes that wreck naive machine translation. Point it at a folder, connect a provider (Anthropic, OpenAI, or any OpenAI-compatible endpoint — including Gemini), optionally build a glossary, and run — watching live, honest telemetry the whole way.
 
 ## Why it's different
 
-- **Line markers & partial-failure recovery** — every line is tracked, so when a model drops, merges, or reorders lines, Polygluttony detects exactly where it broke and salvages the correct prefix instead of failing the whole batch.
+- **Line markers & partial-failure recovery** — every line is tracked, so when a model drops, merges, or reorders lines, Polygluttony Next detects exactly where it broke and salvages the correct prefix instead of failing the whole batch.
 - **Drift detection** — a five-signal weighted detector catches translations wandering off the source mid-batch and retranslates only the part that drifted.
 - **Byte-faithful ASS tags** — `{\pos}`, `{\an8}`, fonts, styles, and metadata come back exactly as they went in; only the dialogue is translated.
 - **Cross-episode glossary** — a six-category glossary, with auto-detected world type (xianxia / wuxia / historical / modern), keeps names and terms consistent across a whole season.
@@ -40,7 +40,7 @@ Grab the latest build for your OS from the [**Releases**](../../releases/latest)
 >
 > - **macOS** — the first launch is blocked. Open **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway**, then launch again and confirm. (Right-click → Open no longer works on recent macOS.)
 > - **Windows** — on the SmartScreen prompt, choose **More info → Run anyway**.
-> - **Linux** — `chmod +x Polygluttony-*.AppImage`, then run it.
+> - **Linux** — `chmod +x Polygluttony-Next-*.AppImage`, then run it.
 
 ## Build from source
 
