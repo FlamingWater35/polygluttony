@@ -5,6 +5,7 @@ import {
   NotePencil,
   Play,
   Question,
+  Gear,
   type Icon,
 } from "@phosphor-icons/react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -27,9 +28,14 @@ const ITEMS: RailItem[] = [
   { to: "/translate", label: "Translate", icon: Play, group: "workflow", needsFolder: true },
   { to: "/connections", label: "Connections", icon: Lightning, group: "setup" },
   { to: "/prompts", label: "Prompts", icon: NotePencil, group: "setup" },
+  { to: "/settings", label: "Settings", icon: Gear, group: "setup" },
   { to: "/help", label: "Help", icon: Question, group: "setup" },
 ];
 
+/**
+ * Primary vertical navigation rail.
+ * Splits workflow and setup actions, gating folder-dependent routes with tooltips.
+ */
 export function NavRail() {
   const workdir = useAppStore((s) => s.workdir);
   const hasUsableConnection = useAppStore((s) => s.hasUsableConnection);
@@ -54,6 +60,7 @@ export function NavRail() {
   const render = (item: RailItem) => {
     const hint = gateHint(item);
     const disabled = hint !== null;
+
     // Project is dual-role: it opens Welcome ("/") until a folder is picked, the
     // Project view after — and highlights on both so they read as one place.
     const isProject = item.to === "/project";
@@ -61,25 +68,27 @@ export function NavRail() {
     const active = isProject
       ? pathname === "/" || pathname.startsWith("/project")
       : pathname.startsWith(item.to);
+
     const Icon = item.icon;
+
     const body = (
       <div
         className={cn(
           "flex w-16 flex-col items-center gap-1 rounded-md py-2 text-[10px]",
-          active && "bg-[color:var(--popover)] text-primary",
+          active && "bg-popover text-primary",
           disabled
             ? "cursor-not-allowed text-muted-foreground/50"
-            : "hover:bg-[color:var(--color-bg-hover)]",
+            : "hover:bg-(--color-bg-hover)",
         )}
       >
-        <Icon weight={active ? "fill" : "regular"} className={cn("size-5", active && "[filter:drop-shadow(0_0_7px_color-mix(in_oklch,var(--color-gold)_75%,transparent))]")} />
+        <Icon weight={active ? "fill" : "regular"} className={cn("size-5", active && "filter-[drop-shadow(0_0_7px_color-mix(in_oklch,var(--color-gold)_75%,transparent))]")} />
         {item.label}
         {item.to === "/connections" ? (
           <span
             className={
               hasUsableConnection
-                ? "text-[color:var(--color-success)]"
-                : "text-[color:var(--color-alert)]"
+                ? "text-(--color-success)"
+                : "text-(--color-alert)"
             }
           >
             {hasUsableConnection ? "✓" : "⚠"}
@@ -90,6 +99,7 @@ export function NavRail() {
         ) : null}
       </div>
     );
+
     if (disabled) {
       return (
         <Tooltip key={item.to}>
@@ -100,6 +110,7 @@ export function NavRail() {
         </Tooltip>
       );
     }
+
     return (
       <Link key={item.to} to={to as never}>
         {body}
@@ -108,8 +119,8 @@ export function NavRail() {
   };
 
   return (
-    <nav className="flex h-full w-20 flex-col items-center gap-1 border-r border-border bg-[color:var(--sidebar)] py-3">
-      <div className="mb-2 grid place-items-center text-primary [filter:drop-shadow(0_0_8px_color-mix(in_oklch,var(--color-gold)_60%,transparent))]">
+    <nav className="flex h-full w-20 flex-col items-center gap-1 border-r border-border bg-sidebar py-3">
+      <div className="mb-2 grid place-items-center text-primary filter-[drop-shadow(0_0_8px_color-mix(in_oklch,var(--color-gold)_60%,transparent))]">
         <Seal className="size-7" />
       </div>
       {workflow.map(render)}
