@@ -21,7 +21,7 @@
 
 ---
 
-Polygluttony Next translates `.ass` subtitle files with an LLM while guarding against the failure modes that wreck naive machine translation. Point it at a folder, connect a provider (Anthropic, OpenAI, or any OpenAI-compatible endpoint — including Gemini), optionally build a glossary, and run — watching live, honest telemetry the whole way.
+Polygluttony Next translates `.ass` subtitle files with an LLM while guarding against the failure modes that wreck naive machine translation. Point it at a folder, connect a provider (Anthropic, Gemini, Openrouter, OpenAI, or any OpenAI-compatible endpoint), optionally build a glossary, and run — watching live, honest telemetry the whole way.
 
 ## Why it's different
 
