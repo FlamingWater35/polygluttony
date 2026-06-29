@@ -1,6 +1,8 @@
 //! Layer-0 structural validation: every requested id came back, nothing extra,
 //! nothing empty. Port of `validation/alignment.py`.
 
+use std::collections::HashSet;
+
 use super::LinePair;
 
 #[derive(Debug, Clone, Default)]
@@ -12,14 +14,32 @@ pub struct AlignmentCheck {
     pub empty_translations: Vec<u32>,
 }
 
+/// Validates structural integrity of LLM output against expected IDs.
+/// Uses HashSets for O(1) lookups to prevent O(N²) stalls on large files.
 pub fn check(expected_ids: &[u32], output: &[LinePair]) -> AlignmentCheck {
-    let mut r = AlignmentCheck { is_valid: true, ..Default::default() };
-    let out_ids: Vec<u32> = output.iter().map(|p| p.id).collect();
+    let mut r = AlignmentCheck {
+        is_valid: true,
+        ..Default::default()
+    };
 
-    r.missing_ids = expected_ids.iter().copied().filter(|id| !out_ids.contains(id)).collect();
-    r.extra_ids = out_ids.iter().copied().filter(|id| !expected_ids.contains(id)).collect();
-    r.empty_translations =
-        output.iter().filter(|p| p.tgt.trim().is_empty()).map(|p| p.id).collect();
+    let out_set: HashSet<u32> = output.iter().map(|p| p.id).collect();
+    let exp_set: HashSet<u32> = expected_ids.iter().copied().collect();
+
+    r.missing_ids = expected_ids
+        .iter()
+        .copied()
+        .filter(|id| !out_set.contains(id))
+        .collect();
+    r.extra_ids = output
+        .iter()
+        .map(|p| p.id)
+        .filter(|id| !exp_set.contains(id))
+        .collect();
+    r.empty_translations = output
+        .iter()
+        .filter(|p| p.tgt.trim().is_empty())
+        .map(|p| p.id)
+        .collect();
 
     if !r.missing_ids.is_empty() || !r.extra_ids.is_empty() || !r.empty_translations.is_empty() {
         r.is_valid = false;
@@ -40,7 +60,11 @@ mod tests {
     use crate::validation::LinePair;
 
     fn pair(id: u32, tgt: &str) -> LinePair {
-        LinePair { id, src: format!("src{id}"), tgt: tgt.into() }
+        LinePair {
+            id,
+            src: format!("src{id}"),
+            tgt: tgt.into(),
+        }
     }
 
     #[test]
