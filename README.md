@@ -48,7 +48,7 @@ bun tauri build    # produce a distributable bundle
 
 ## Development
 
-Generators
+To run generators:
 
 ```bash
 bun run gen:routes
