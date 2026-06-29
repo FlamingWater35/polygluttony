@@ -8,11 +8,9 @@
 
 [Original repository](https://github.com/blyat-uk/polygluttony) · [Download](../../releases/latest) · macOS · Windows · Linux
 
-</div>
-
----
-
 *Note: This is a fork of the original Polygluttony project. Please support the [original developer](https://github.com/blyat-uk).*
+
+</div>
 
 ---
 
