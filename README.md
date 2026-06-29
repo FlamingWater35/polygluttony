@@ -12,7 +12,7 @@
 
 ---
 
-*Note: This is a fork of the original Polygluttony project. Credits for this tool go to the original [developer](https://github.com/blyat-uk).*
+*Note: This is a fork of the original Polygluttony project. Please support the [original developer](https://github.com/blyat-uk).*
 
 ---
 
@@ -44,6 +44,15 @@ Requires [Bun](https://bun.sh) and [Rust](https://rustup.rs) (stable), plus the 
 bun install
 bun tauri dev      # run with hot reload
 bun tauri build    # produce a distributable bundle
+```
+
+## Development
+
+Generators
+
+```bash
+bun run gen:routes
+bun run gen:bindings
 ```
 
 ## Stack
