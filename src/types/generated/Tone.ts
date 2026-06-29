@@ -3,4 +3,4 @@
 /**
  * Translation tone (register). Persisted per folder; used by Translate (Step 3).
  */
-export type Tone = "standard" | "xianxia" | "wuxia" | "comedic" | "funny";
+export type Tone = "standard" | "xianxia" | "wuxia" | "comedic" | "funny" | "poetic";

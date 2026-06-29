@@ -20,8 +20,7 @@ import { SectionHelp } from "@/components/section-help";
 
 // ── constants ────────────────────────────────────────────────────────────────
 
-const TONES: Tone[] = ["standard", "xianxia", "wuxia", "comedic", "funny"];
-
+const TONES: Tone[] = ["standard", "xianxia", "wuxia", "comedic", "funny", "poetic"];
 const SELECT_CLS =
   "h-9 rounded-md border border-input bg-[color:var(--card)] px-2 text-sm";
 
@@ -199,24 +198,24 @@ export function TranslatePage() {
             <span className="font-medium text-foreground">
               Translated {succeeded.length} file{succeeded.length !== 1 ? "s" : ""} —{" "}
             </span>
-            <span className="text-[color:var(--color-success)]">{clean} clean</span>
+            <span className="text-(--color-success)">{clean} clean</span>
             {warn > 0 ? (
               <>
                 <span className="text-muted-foreground">, </span>
-                <span className="text-[color:var(--color-alert)]">{warn} need a look</span>
+                <span className="text-(--color-alert)">{warn} need a look</span>
               </>
             ) : null}
             {failed > 0 ? (
               <>
                 <span className="text-muted-foreground">, </span>
-                <span className="text-[color:var(--color-danger)]">{failed} failed or cancelled</span>
+                <span className="text-(--color-danger)">{failed} failed or cancelled</span>
               </>
             ) : null}
           </>
         ) : (
           <>
             <span className="font-medium text-foreground">No files completed — </span>
-            <span className="text-[color:var(--color-danger)]">{failed} failed or cancelled</span>
+            <span className="text-(--color-danger)">{failed} failed or cancelled</span>
           </>
         )}
         <span className="text-muted-foreground">.</span>
@@ -286,7 +285,7 @@ export function TranslatePage() {
             </span>
           </div>
         ) : (
-          <div className="rounded-md border border-border bg-[color:var(--card)] px-4 py-2.5 text-[12.5px] text-muted-foreground">
+          <div className="rounded-md border border-border bg-card px-4 py-2.5 text-[12.5px] text-muted-foreground">
             Select files below to see an estimate.
           </div>
         )}
@@ -301,11 +300,11 @@ export function TranslatePage() {
 
         {/* Hero batch card (active file during a run) */}
         {hero && heroName ? (
-          <div className="relative overflow-hidden rounded-xl border border-[color:color-mix(in_oklch,var(--color-gold)_22%,transparent)] bg-[linear-gradient(180deg,rgba(225,166,54,.05),rgba(225,166,54,.015))] p-4">
+          <div className="relative overflow-hidden rounded-xl border border-[color-mix(in_oklch,var(--color-gold)_22%,transparent)] bg-[linear-gradient(180deg,rgba(225,166,54,.05),rgba(225,166,54,.015))] p-4">
             <div className="mb-3 flex items-baseline justify-between">
-              <span className="font-mono text-[14px] text-[color:var(--color-ink-emphasis)]">{heroName}</span>
+              <span className="font-mono text-[14px] text-(--color-ink-emphasis)">{heroName}</span>
               <span className="text-[11px] text-muted-foreground tabular-nums">
-                {hero.total > 0 ? <><b className="font-semibold text-[color:var(--color-gold-hi)]">{hero.translated.toLocaleString()}</b>/{hero.total.toLocaleString()} translated</> : "starting…"}
+                {hero.total > 0 ? <><b className="font-semibold text-(--color-gold-hi)">{hero.translated.toLocaleString()}</b>/{hero.total.toLocaleString()} translated</> : "starting…"}
               </span>
             </div>
             <div className="grid grid-cols-[1fr_158px] items-stretch gap-5">
@@ -323,7 +322,7 @@ export function TranslatePage() {
         <div className="rounded-md border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-[color:var(--color-bg-raised)] text-[11px] text-muted-foreground uppercase tracking-wide">
+              <tr className="border-b border-border bg-(--color-bg-raised) text-[11px] text-muted-foreground uppercase tracking-wide">
                 <th className="px-4 py-2 text-left font-medium w-[26%]">File</th>
                 <th className="px-4 py-2 text-right font-medium w-[9%] tabular-nums">Lines</th>
                 <th className="px-4 py-2 text-left font-medium w-[17%]">State</th>
@@ -364,7 +363,7 @@ export function TranslatePage() {
                   return (
                     <Fragment key={file.name}>
                       <tr
-                        className={`border-b border-border last:border-0 hover:bg-[color:var(--color-bg-hover)]${onActivate ? " cursor-pointer" : ""}${isHero ? " bg-[color:color-mix(in_oklch,var(--color-gold)_8%,transparent)]" : ""}`}
+                        className={`border-b border-border last:border-0 hover:bg-[color:var(--color-bg-hover)]${onActivate ? " cursor-pointer" : ""}${isHero ? " bg-[color-mix(in_oklch,var(--color-gold)_8%,transparent)]" : ""}`}
                         onClick={onActivate}
                         role={onActivate ? "button" : undefined}
                         tabIndex={onActivate ? 0 : undefined}
@@ -408,13 +407,13 @@ export function TranslatePage() {
                             <span>
                               {row.translated}/{row.total} · batch {row.batch}/{row.totalBatches}
                               {row.retries > 0 ? (
-                                <span className="ml-2 text-[color:var(--color-alert)]">
+                                <span className="ml-2 text-(--color-alert)">
                                   ↺ {row.retries}
                                 </span>
                               ) : null}
                             </span>
                           ) : row?.error ? (
-                            <span className="text-[color:var(--color-danger)] truncate block max-w-xs">
+                            <span className="text-(--color-danger) truncate block max-w-xs">
                               {row.error}
                             </span>
                           ) : (
@@ -462,7 +461,7 @@ export function TranslatePage() {
       </div>
 
       {/* Controls row + log toggle */}
-      <div className="border-t border-border bg-[color:var(--popover)] px-5 py-3 flex items-center gap-3">
+      <div className="border-t border-border bg-popover px-5 py-3 flex items-center gap-3">
         {running ? (
           <Button variant="destructive" onClick={handleCancel}>
             <Stop className="size-4" /> Cancel
@@ -478,7 +477,7 @@ export function TranslatePage() {
             Select files in the Project view first.
           </span>
         ) : !hasUsableConnection && !running ? (
-          <span className="text-[11.5px] text-[color:var(--color-alert)]">
+          <span className="text-[11.5px] text-(--color-alert)">
             No usable connection — add one in Connections.
           </span>
         ) : null}
@@ -498,7 +497,7 @@ export function TranslatePage() {
             message: entry.message,
             meta: [
               entry.file ? (
-                <span key="f" className="shrink-0 text-muted-foreground truncate max-w-[120px]">
+                <span key="f" className="shrink-0 text-muted-foreground truncate max-w-30">
                   {entry.file}
                 </span>
               ) : (

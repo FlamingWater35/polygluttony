@@ -16,7 +16,7 @@ import { HelpText } from "@/components/help-text";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 
-const TONES: Tone[] = ["standard", "xianxia", "wuxia", "comedic", "funny"];
+const TONES: Tone[] = ["standard", "xianxia", "wuxia", "comedic", "funny", "poetic"];
 const WORLDS: WorldType[] = ["xianxia", "wuxia", "historical", "modern"];
 
 // Tone implied by a world type — keep in sync with `tone_for_world` in

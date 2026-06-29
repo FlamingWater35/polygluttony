@@ -4,4 +4,4 @@
  * Stable identifier for each editable prompt template. Serialized kebab-case
  * across IPC (e.g. `"translate-zh-en"`).
  */
-export type PromptId = "translate-zh-en" | "translate-generic" | "tone-standard" | "tone-xianxia" | "tone-wuxia" | "tone-comedic" | "tone-funny" | "glossary-extract" | "glossary-normalize-characters" | "glossary-normalize-cultivation" | "glossary-normalize-skills" | "glossary-normalize-locations" | "glossary-normalize-items" | "glossary-normalize-organizations" | "glossary-personalize" | "reference-extract" | "verify";
+export type PromptId = "translate-zh-en" | "translate-generic" | "tone-standard" | "tone-xianxia" | "tone-wuxia" | "tone-comedic" | "tone-funny" | "tone-poetic" | "glossary-extract" | "glossary-normalize-characters" | "glossary-normalize-cultivation" | "glossary-normalize-skills" | "glossary-normalize-locations" | "glossary-normalize-items" | "glossary-normalize-organizations" | "glossary-personalize" | "reference-extract" | "verify";

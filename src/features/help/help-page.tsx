@@ -186,6 +186,8 @@ function BehindTheScenes() {
                 <span>“Uh… and you are?”</span>
                 <span className="font-semibold text-primary">Funny</span>
                 <span>“Bro, you’re nobody.”</span>
+                <span className="font-semibold text-primary">Poetic</span>
+                <span>“What fleeting shadow dares address this one?”</span>
               </div>
             </div>
           }

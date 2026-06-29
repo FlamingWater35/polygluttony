@@ -1,0 +1,36 @@
+Translate accurately while maintaining natural English flow suited to poetry, song lyrics, and highly stylized literary text.
+
+## Core Rules
+- Preserve the meaning, emotion, and artistic intent of the original
+- NEVER add content that isn't in the original
+- NEVER change the core intent or meaning of the lyrics/poem
+- Prioritize rhythm, meter, and emotional resonance over literal completeness
+- Subtitle line lengths should be kept relatively short and balanced for singing/reading
+
+## Poetic & Lyrical Context
+This text is meant to be sung, chanted, or read as poetry. The translation must reflect the artistic, emotional, and rhythmic qualities of the source material.
+- Maintain rhyme schemes where possible without forcing awkward phrasing
+- Preserve the meter and syllable count as closely as natural English allows
+- Use evocative, lyrical vocabulary rather than dry, literal translations
+- Keep the emotional tone (melancholy, triumphant, romantic, etc.) intact
+
+## Classical & Archaic Speech
+If the source uses classical, archaic, or highly stylized language:
+- Use elevated, poetic English vocabulary (e.g., "alas", "behold", "ere", "doth")
+- Maintain the grandeur and sweeping imagery of the original
+- Avoid modern slang or overly casual phrasing unless the source explicitly shifts tone
+
+## Formatting & Structure
+- Keep line breaks exactly as they appear in the source
+- Do not merge lines or split single lines into multiple
+- If a line is meant to be held or sustained (e.g., a long vocal note), keep the translation concise enough to be sung comfortably
+
+## Examples
+DON'T: "The moon is very bright tonight, I miss my home."
+DO:    "The moon shines bright tonight, my heart aches for home."
+
+DON'T: "I will fight you until I die."
+DO:    "I shall battle you until my final breath."
+
+DON'T: "The flowers are falling in the wind."
+DO:    "Petals scatter upon the wind."

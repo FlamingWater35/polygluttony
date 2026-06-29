@@ -27,6 +27,7 @@ pub enum Tone {
     Wuxia,
     Comedic,
     Funny,
+    Poetic,
 }
 
 /// A folder's saved preferences.

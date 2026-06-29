@@ -30,6 +30,7 @@ pub enum PromptId {
     ToneWuxia,
     ToneComedic,
     ToneFunny,
+    TonePoetic,
     GlossaryExtract,
     GlossaryNormalizeCharacters,
     GlossaryNormalizeCultivation,
@@ -78,7 +79,7 @@ tone (Standard, Xianxia, Wuxia, Comedic, Funny — each editable under Tones).";
 const SRC_LANG_DESC: &str = "Replaced with the source language name, e.g. \"Chinese\".";
 const TGT_LANG_DESC: &str = "Replaced with the target language name, e.g. \"English\".";
 
-static ENTRIES: [Entry; 17] = [
+static ENTRIES: [Entry; 18] = [
     Entry {
         id: PromptId::TranslateZhEn,
         name: "Chinese → English",
@@ -93,7 +94,11 @@ static ENTRIES: [Entry; 17] = [
 translated — one \"中文 → English\" line per term. Without it the glossary never \
 reaches the model.",
             },
-            Placeholder { token: "{TONE}", required: true, description: TONE_DESC },
+            Placeholder {
+                token: "{TONE}",
+                required: true,
+                description: TONE_DESC,
+            },
         ],
     },
     Entry {
@@ -103,9 +108,21 @@ reaches the model.",
         file: "translate.generic.txt",
         default: include_str!("../../prompts/translate.generic.txt"),
         placeholders: &[
-            Placeholder { token: "{source_language}", required: true, description: SRC_LANG_DESC },
-            Placeholder { token: "{target_language}", required: true, description: TGT_LANG_DESC },
-            Placeholder { token: "{localization_style}", required: true, description: TONE_DESC },
+            Placeholder {
+                token: "{source_language}",
+                required: true,
+                description: SRC_LANG_DESC,
+            },
+            Placeholder {
+                token: "{target_language}",
+                required: true,
+                description: TGT_LANG_DESC,
+            },
+            Placeholder {
+                token: "{localization_style}",
+                required: true,
+                description: TONE_DESC,
+            },
         ],
     },
     Entry {
@@ -149,13 +166,25 @@ reaches the model.",
         placeholders: &[],
     },
     Entry {
+        id: PromptId::TonePoetic,
+        name: "Poetic",
+        group: PromptGroup::Tones,
+        file: "tones/poetic.txt",
+        default: include_str!("../../prompts/tones/poetic.txt"),
+        placeholders: &[],
+    },
+    Entry {
         id: PromptId::GlossaryExtract,
         name: "Extraction",
         group: PromptGroup::Glossary,
         file: "glossary.txt",
         default: include_str!("../../prompts/glossary.txt"),
         placeholders: &[
-            Placeholder { token: "{world_type}", required: true, description: WORLD_DESC },
+            Placeholder {
+                token: "{world_type}",
+                required: true,
+                description: WORLD_DESC,
+            },
             Placeholder {
                 token: "{reference_terminology}",
                 required: false,
@@ -163,8 +192,16 @@ reaches the model.",
 translated episodes (the Reference review in Glossary). When none exist, the entire \
 \"## REFERENCE TERMINOLOGY\" section is removed before sending.",
             },
-            Placeholder { token: "{source_language}", required: false, description: SRC_LANG_DESC },
-            Placeholder { token: "{target_language}", required: false, description: TGT_LANG_DESC },
+            Placeholder {
+                token: "{source_language}",
+                required: false,
+                description: SRC_LANG_DESC,
+            },
+            Placeholder {
+                token: "{target_language}",
+                required: false,
+                description: TGT_LANG_DESC,
+            },
         ],
     },
     Entry {
@@ -173,7 +210,11 @@ translated episodes (the Reference review in Glossary). When none exist, the ent
         group: PromptGroup::Glossary,
         file: "glossary-normalize-characters.txt",
         default: include_str!("../../prompts/glossary-normalize-characters.txt"),
-        placeholders: &[Placeholder { token: "{world_type}", required: true, description: WORLD_DESC }],
+        placeholders: &[Placeholder {
+            token: "{world_type}",
+            required: true,
+            description: WORLD_DESC,
+        }],
     },
     Entry {
         id: PromptId::GlossaryNormalizeCultivation,
@@ -181,7 +222,11 @@ translated episodes (the Reference review in Glossary). When none exist, the ent
         group: PromptGroup::Glossary,
         file: "glossary-normalize-cultivation.txt",
         default: include_str!("../../prompts/glossary-normalize-cultivation.txt"),
-        placeholders: &[Placeholder { token: "{world_type}", required: true, description: WORLD_DESC }],
+        placeholders: &[Placeholder {
+            token: "{world_type}",
+            required: true,
+            description: WORLD_DESC,
+        }],
     },
     Entry {
         id: PromptId::GlossaryNormalizeSkills,
@@ -189,7 +234,11 @@ translated episodes (the Reference review in Glossary). When none exist, the ent
         group: PromptGroup::Glossary,
         file: "glossary-normalize-skills.txt",
         default: include_str!("../../prompts/glossary-normalize-skills.txt"),
-        placeholders: &[Placeholder { token: "{world_type}", required: true, description: WORLD_DESC }],
+        placeholders: &[Placeholder {
+            token: "{world_type}",
+            required: true,
+            description: WORLD_DESC,
+        }],
     },
     Entry {
         id: PromptId::GlossaryNormalizeLocations,
@@ -197,7 +246,11 @@ translated episodes (the Reference review in Glossary). When none exist, the ent
         group: PromptGroup::Glossary,
         file: "glossary-normalize-locations.txt",
         default: include_str!("../../prompts/glossary-normalize-locations.txt"),
-        placeholders: &[Placeholder { token: "{world_type}", required: true, description: WORLD_DESC }],
+        placeholders: &[Placeholder {
+            token: "{world_type}",
+            required: true,
+            description: WORLD_DESC,
+        }],
     },
     Entry {
         id: PromptId::GlossaryNormalizeItems,
@@ -205,7 +258,11 @@ translated episodes (the Reference review in Glossary). When none exist, the ent
         group: PromptGroup::Glossary,
         file: "glossary-normalize-items.txt",
         default: include_str!("../../prompts/glossary-normalize-items.txt"),
-        placeholders: &[Placeholder { token: "{world_type}", required: true, description: WORLD_DESC }],
+        placeholders: &[Placeholder {
+            token: "{world_type}",
+            required: true,
+            description: WORLD_DESC,
+        }],
     },
     Entry {
         id: PromptId::GlossaryNormalizeOrganizations,
@@ -213,7 +270,11 @@ translated episodes (the Reference review in Glossary). When none exist, the ent
         group: PromptGroup::Glossary,
         file: "glossary-normalize-organizations.txt",
         default: include_str!("../../prompts/glossary-normalize-organizations.txt"),
-        placeholders: &[Placeholder { token: "{world_type}", required: true, description: WORLD_DESC }],
+        placeholders: &[Placeholder {
+            token: "{world_type}",
+            required: true,
+            description: WORLD_DESC,
+        }],
     },
     Entry {
         id: PromptId::GlossaryPersonalize,
@@ -228,7 +289,11 @@ translated episodes (the Reference review in Glossary). When none exist, the ent
                 description: "Replaced with the series title — taken from the first line \
 of the personalize context box in Glossary (\"Unknown\" when empty).",
             },
-            Placeholder { token: "{world_type}", required: true, description: WORLD_DESC },
+            Placeholder {
+                token: "{world_type}",
+                required: true,
+                description: WORLD_DESC,
+            },
         ],
     },
     Entry {
@@ -261,16 +326,17 @@ pub fn entry(id: PromptId) -> &'static Entry {
         PromptId::ToneWuxia => &ENTRIES[4],
         PromptId::ToneComedic => &ENTRIES[5],
         PromptId::ToneFunny => &ENTRIES[6],
-        PromptId::GlossaryExtract => &ENTRIES[7],
-        PromptId::GlossaryNormalizeCharacters => &ENTRIES[8],
-        PromptId::GlossaryNormalizeCultivation => &ENTRIES[9],
-        PromptId::GlossaryNormalizeSkills => &ENTRIES[10],
-        PromptId::GlossaryNormalizeLocations => &ENTRIES[11],
-        PromptId::GlossaryNormalizeItems => &ENTRIES[12],
-        PromptId::GlossaryNormalizeOrganizations => &ENTRIES[13],
-        PromptId::GlossaryPersonalize => &ENTRIES[14],
-        PromptId::ReferenceExtract => &ENTRIES[15],
-        PromptId::Verify => &ENTRIES[16],
+        PromptId::TonePoetic => &ENTRIES[7],
+        PromptId::GlossaryExtract => &ENTRIES[8],
+        PromptId::GlossaryNormalizeCharacters => &ENTRIES[9],
+        PromptId::GlossaryNormalizeCultivation => &ENTRIES[10],
+        PromptId::GlossaryNormalizeSkills => &ENTRIES[11],
+        PromptId::GlossaryNormalizeLocations => &ENTRIES[12],
+        PromptId::GlossaryNormalizeItems => &ENTRIES[13],
+        PromptId::GlossaryNormalizeOrganizations => &ENTRIES[14],
+        PromptId::GlossaryPersonalize => &ENTRIES[15],
+        PromptId::ReferenceExtract => &ENTRIES[16],
+        PromptId::Verify => &ENTRIES[17],
     };
     debug_assert!(e.id == id, "ENTRIES order must match the entry() arms");
     e
@@ -297,6 +363,7 @@ pub fn tone_id(tone: Tone) -> PromptId {
         Tone::Wuxia => PromptId::ToneWuxia,
         Tone::Comedic => PromptId::ToneComedic,
         Tone::Funny => PromptId::ToneFunny,
+        Tone::Poetic => PromptId::TonePoetic,
     }
 }
 
@@ -564,7 +631,11 @@ mod tests {
         // match-arm indices to the ENTRIES order (the debug_assert's release-
         // mode counterpart) and implies id uniqueness.
         for e in &ENTRIES {
-            assert!(std::ptr::eq(entry(e.id), e), "{:?}: entry() returns the wrong Entry", e.id);
+            assert!(
+                std::ptr::eq(entry(e.id), e),
+                "{:?}: entry() returns the wrong Entry",
+                e.id
+            );
         }
     }
 
@@ -577,11 +648,25 @@ mod tests {
         // Override wins (including nested tones/ paths).
         std::fs::create_dir_all(dir.path().join("tones")).unwrap();
         std::fs::write(dir.path().join("tones/xianxia.txt"), "custom tone").unwrap();
-        assert_eq!(resolve(PromptId::ToneXianxia, dir.path()).unwrap(), "custom tone");
+        assert_eq!(
+            resolve(PromptId::ToneXianxia, dir.path()).unwrap(),
+            "custom tone"
+        );
         // list_meta reflects the override as modified=true (and others stay false).
         let meta = list_meta(dir.path());
-        assert!(meta.iter().find(|m| m.id == PromptId::ToneXianxia).unwrap().modified);
-        assert!(!meta.iter().find(|m| m.id == PromptId::Verify).unwrap().modified);
+        assert!(
+            meta.iter()
+                .find(|m| m.id == PromptId::ToneXianxia)
+                .unwrap()
+                .modified
+        );
+        assert!(
+            !meta
+                .iter()
+                .find(|m| m.id == PromptId::Verify)
+                .unwrap()
+                .modified
+        );
     }
 
     #[test]
@@ -590,7 +675,10 @@ mod tests {
         // Invalid UTF-8 → read_to_string fails → hard error naming the prompt.
         std::fs::write(dir.path().join("verify.txt"), [0xff, 0xfe, 0xfd]).unwrap();
         let err = resolve(PromptId::Verify, dir.path()).unwrap_err();
-        assert!(err.to_string().contains("Drift check"), "error names the prompt: {err}");
+        assert!(
+            err.to_string().contains("Drift check"),
+            "error names the prompt: {err}"
+        );
     }
 
     #[test]
@@ -609,10 +697,16 @@ mod tests {
     #[test]
     fn fill_is_single_pass_case_insensitive_and_leaves_unknown_tokens() {
         // Any case variant of a known token fills.
-        let r = fill("{GLOSSARY}|{Tone}|{tone}", &[("glossary", "G"), ("tone", "T")]);
+        let r = fill(
+            "{GLOSSARY}|{Tone}|{tone}",
+            &[("glossary", "G"), ("tone", "T")],
+        );
         assert_eq!(r, "G|T|T");
         // Inserted values are never re-scanned.
-        let r = fill("{glossary} {tone}", &[("glossary", "has {tone} inside"), ("tone", "T")]);
+        let r = fill(
+            "{glossary} {tone}",
+            &[("glossary", "has {tone} inside"), ("tone", "T")],
+        );
         assert_eq!(r, "has {tone} inside T");
         // Unknown tokens and non-tokens stay intact.
         let r = fill("{established_terms} {} {123} x", &[("tone", "T")]);
