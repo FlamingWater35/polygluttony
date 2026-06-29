@@ -6,6 +6,13 @@
 
 **LLM-powered subtitle translation for donghua & anime — built to protect the things that break.**
 
+![Tauri 2](https://img.shields.io/badge/Tauri-2-FFC131?logo=tauri&logoColor=000)
+![Rust](https://img.shields.io/badge/Rust-000?logo=rust&logoColor=fff)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=000)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)
+![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=fff)
+![TanStack](https://img.shields.io/badge/TanStack-Router%20%7C%20Query-EF4444?logo=reactquery&logoColor=fff)
+
 [Original repository](https://github.com/blyat-uk/polygluttony) · [Download](../../releases/latest) · macOS · Windows · Linux
 
 *Note: This is a fork of the original Polygluttony project. Please support the [original developer](https://github.com/blyat-uk).*
@@ -53,10 +60,6 @@ bun run gen:routes
 bun run gen:bindings
 ```
 
-## Stack
-
-Tauri 2 · Rust · React 19 · TypeScript · Tailwind v4 · TanStack Router/Query.
-
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE)
