@@ -13,9 +13,13 @@
 ![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=fff)
 ![TanStack](https://img.shields.io/badge/TanStack-Router%20%7C%20Query-EF4444?logo=reactquery&logoColor=fff)
 
+## Platforms
+
 ![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-0078D4?logo=windows&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black)
+
+## Links
 
 [![Original Repository](https://img.shields.io/badge/Original-Repository-24292E?logo=github&logoColor=white&style=for-the-badge)](https://github.com/blyat-uk/polygluttony)
 [![Download](https://img.shields.io/badge/Download-Latest-2EA043?logo=github&logoColor=white&style=for-the-badge)](../../releases/latest)
