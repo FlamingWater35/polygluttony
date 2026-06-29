@@ -1,8 +1,9 @@
 import { PageHeader } from "@/components/page-header";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSettingsStore, UI_SCALE_LABELS, type UIScale } from "@/stores/settings-store";
 import { HelpText } from "@/components/help-text";
 import { TextAa } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * Settings page: central hub for user preferences.
@@ -34,27 +35,25 @@ export function SettingsPage() {
                 </HelpText>
               </div>
 
-              <ToggleGroup
-                type="single"
-                value={uiScale}
-                onValueChange={(v) => {
-                  // Radix ToggleGroup can return empty string if deselected,
-                  // but type="single" generally maintains a selection.
-                  if (v) setUIScale(v as UIScale);
-                }}
-                className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-              >
-                {(Object.keys(UI_SCALE_LABELS) as UIScale[]).map((key) => (
-                  <ToggleGroupItem
-                    key={key}
-                    value={key}
-                    aria-label={UI_SCALE_LABELS[key]}
-                    className="flex-1 justify-center text-[12px]"
-                  >
-                    {UI_SCALE_LABELS[key]}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {(Object.keys(UI_SCALE_LABELS) as UIScale[]).map((key) => {
+                  const isSelected = uiScale === key;
+                  return (
+                    <Button
+                      key={key}
+                      variant={isSelected ? "default" : "outline"}
+                      onClick={() => setUIScale(key)}
+                      className={cn(
+                        "h-10 justify-center text-[13px] font-medium transition-all",
+                        isSelected && "bg-primary text-primary-foreground hover:bg-primary/90"
+                      )}
+                      aria-pressed={isSelected}
+                    >
+                      {UI_SCALE_LABELS[key]}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           </section>
         </div>
