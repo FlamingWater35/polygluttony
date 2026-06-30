@@ -1,9 +1,4 @@
 //! Glossary commands (O9–O15). Thin wrappers — the engine lives in `glossary::*`.
-
-use std::path::{Path, PathBuf};
-
-use tauri::{AppHandle, Manager};
-
 use crate::config::store as config_store;
 use crate::error::{AppError, AppResult};
 use crate::glossary::diff::GlossaryDiff;
@@ -14,17 +9,37 @@ use crate::glossary::reference::{self, ReferenceStatus, ReferenceSummary, Refere
 use crate::glossary::run::{self, GlossaryOpKind, StartArgs};
 use crate::glossary::watch::{self, GlossaryWatchState};
 use crate::glossary::world_detector::WorldType;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Manager};
 
 /// O9 — None when no glossary.json exists (or it's unreadable: lenient).
+/// Async to avoid blocking the tokio runtime on file I/O.
 #[tauri::command]
-pub fn load_glossary(folder: String) -> Option<GlossaryDoc> {
-    load_folder_glossary(&PathBuf::from(folder)).map(|g| GlossaryDoc::from(&g))
+pub async fn load_glossary(folder: String) -> AppResult<Option<GlossaryDoc>> {
+    let path = PathBuf::from(&folder).join("glossary.json");
+
+    // Use tokio::fs for async file I/O
+    match tokio::fs::read_to_string(&path).await {
+        Ok(text) => {
+            let glossary = crate::glossary::model::Glossary::from_json(&text)
+                .ok_or_else(|| AppError::Other("Failed to parse glossary.json".into()))?;
+            Ok(Some(GlossaryDoc::from(&glossary)))
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(AppError::Io(e)),
+    }
 }
 
 /// O14 — atomic write; the UI auto-saves every term edit.
 #[tauri::command]
-pub fn save_glossary(folder: String, doc: GlossaryDoc) -> AppResult<()> {
-    save_folder_glossary(&PathBuf::from(folder), &doc.into_glossary())
+pub async fn save_glossary(folder: String, doc: GlossaryDoc) -> AppResult<()> {
+    let glossary = doc.into_glossary();
+    let folder_path = PathBuf::from(folder);
+
+    // Offload synchronous file I/O to a blocking thread
+    tokio::task::spawn_blocking(move || save_folder_glossary(&folder_path, &glossary))
+        .await
+        .map_err(|e| AppError::Other(format!("Task join error: {e}")))?
 }
 
 // JS sends camelCase keys (worldType, sourceLang, …) — the macro converts; see

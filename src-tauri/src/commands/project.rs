@@ -1,10 +1,5 @@
 //! Folder-pickup commands (O6/O7/O8) + per-folder persistence. Thin wrappers over
 //! the tested engine modules; `open_folder` bundles discovery + counts + detection.
-
-use std::path::{Path, PathBuf};
-
-use tauri::AppHandle;
-
 use crate::ass::{decode::decode_file, parse::parse_dialogues, tags::strip_for_text};
 use crate::config::languages::{detect_source_language, get_language, languages, Language};
 use crate::config::projects::{self, FolderPrefs, RecentFolder};
@@ -14,6 +9,8 @@ use crate::glossary::world_detector::detect;
 use crate::models::language_pair::LanguagePair;
 use crate::models::{ProjectView, SourceFile};
 use crate::utils::discover::{discover_source_files, has_existing_translation};
+use std::path::{Path, PathBuf};
+use tauri::AppHandle;
 
 #[tauri::command]
 pub fn list_languages() -> Vec<Language> {
@@ -24,8 +21,9 @@ pub fn list_languages() -> Vec<Language> {
     langs
 }
 
+/// Async to avoid blocking the tokio runtime on file I/O.
 #[tauri::command]
-pub fn list_recents(app: AppHandle) -> AppResult<Vec<RecentFolder>> {
+pub async fn list_recents(app: AppHandle) -> AppResult<Vec<RecentFolder>> {
     let mut cfg = projects::load(&app)?;
     let before = cfg.recents.len();
     projects::prune_recents(&mut cfg, |p| Path::new(p).is_dir());
