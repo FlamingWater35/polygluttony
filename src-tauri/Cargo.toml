@@ -1,6 +1,6 @@
 [package]
 name = "polygluttony-next"
-version = "1.0.4"
+version = "1.0.5"
 description = "LLM-powered subtitle translation for donghua and anime"
 authors = ["n0ks"]
 edition = "2021"
